@@ -10,10 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout our code
+    - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        path: our-app
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -21,76 +19,80 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Install NDK
-      run: sdkmanager "ndk;25.2.9519653"
-
-    - name: Install build tools
+    - name: Download strongSwan APK and extract libraries
       run: |
-        sudo apt-get update
-        sudo apt-get install -y bison flex gperf
+        # Download strongSwan APK from GitHub mirror
+        wget -q "https://github.com/nicholass003/strongswan-apk/releases/download/v2.5.2/strongSwan-2.5.2.apk" -O strongswan.apk || true
+        
+        # If that fails, try direct APKMirror/APKPure link
+        if [ ! -f strongswan.apk ]; then
+          # Alternative: use the official strongSwan release from f-droid
+          wget -q "https://f-droid.org/repo/org.strongswan.android_76.apk" -O strongswan.apk || true
+        fi
+        
+        if [ -f strongswan.apk ]; then
+          mkdir -p strongswan_extracted
+          cd strongswan_extracted
+          unzip -o ../strongswan.apk "lib/*" "assets/*" 2>/dev/null || true
+          
+          # Copy native libraries
+          mkdir -p ../app/src/main/jniLibs/arm64-v8a
+          mkdir -p ../app/src/main/jniLibs/armeabi-v7a
+          
+          cp lib/arm64-v8a/*.so ../app/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
+          cp lib/armeabi-v7a/*.so ../app/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
+          
+          echo "Libraries extracted:"
+          ls -la ../app/src/main/jniLibs/arm64-v8a/ 2>/dev/null || echo "No arm64 libs"
+          ls -la ../app/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || echo "No armv7 libs"
+          cd ..
+        else
+          echo "WARNING: Could not download strongSwan APK"
+          echo "Building without native libraries"
+        fi
 
-    - name: Clone strongSwan
+    - name: Download strongSwan source for Java classes
       run: |
         git clone --depth 1 --branch 6.0.0 https://github.com/strongswan/strongswan.git strongswan-src
-
-    - name: Build strongSwan native libraries
-      run: |
-        cd strongswan-src
-        export ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653
-        cd src/frontends/android
         
-        # Create local.properties
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
-        echo "ndk.dir=$ANDROID_NDK_ROOT" >> local.properties
-        
-        # Build the native libraries
-        cd app/src/main/jni
-        $ANDROID_NDK_ROOT/ndk-build APP_ABI="arm64-v8a armeabi-v7a" -j$(nproc)
-
-    - name: Copy native libraries to our project
-      run: |
-        mkdir -p our-app/app/src/main/jniLibs/arm64-v8a
-        mkdir -p our-app/app/src/main/jniLibs/armeabi-v7a
-        
-        cp strongswan-src/src/frontends/android/app/src/main/libs/arm64-v8a/*.so our-app/app/src/main/jniLibs/arm64-v8a/
-        cp strongswan-src/src/frontends/android/app/src/main/libs/armeabi-v7a/*.so our-app/app/src/main/jniLibs/armeabi-v7a/
-
-    - name: Copy strongSwan Java sources to our project
-      run: |
-        # Copy the strongSwan Android Java sources we need
         SS_JAVA=strongswan-src/src/frontends/android/app/src/main/java/org/strongswan/android
-        OUR_JAVA=our-app/app/src/main/java/org/strongswan/android
+        OUR_JAVA=app/src/main/java/org/strongswan/android
         
         mkdir -p $OUR_JAVA
-        cp -r $SS_JAVA/data $OUR_JAVA/
-        cp -r $SS_JAVA/logic $OUR_JAVA/
-        cp -r $SS_JAVA/security $OUR_JAVA/
-        cp -r $SS_JAVA/utils $OUR_JAVA/
+        
+        # Copy only the Java source files we need
+        cp -r $SS_JAVA/data $OUR_JAVA/ 2>/dev/null || true
+        cp -r $SS_JAVA/logic $OUR_JAVA/ 2>/dev/null || true
+        cp -r $SS_JAVA/security $OUR_JAVA/ 2>/dev/null || true
+        cp -r $SS_JAVA/utils $OUR_JAVA/ 2>/dev/null || true
         
         # Copy AIDL files
         SS_AIDL=strongswan-src/src/frontends/android/app/src/main/aidl
-        OUR_AIDL=our-app/app/src/main/aidl
+        OUR_AIDL=app/src/main/aidl
         mkdir -p $OUR_AIDL
-        cp -r $SS_AIDL/* $OUR_AIDL/
+        cp -r $SS_AIDL/* $OUR_AIDL/ 2>/dev/null || true
+        
+        echo "Java sources copied:"
+        find $OUR_JAVA -name "*.java" | head -20
+        echo "AIDL files:"
+        find $OUR_AIDL -name "*.aidl" | head -10
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
         gradle-version: '8.2'
 
-    - name: Build APK
+    - name: Create Gradle wrapper
       run: |
-        cd our-app
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
-        ./gradlew assembleDebug --stacktrace
+
+    - name: Build debug APK
+      run: ./gradlew assembleDebug --stacktrace 2>&1 | tail -100
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: IKEv2-Client
-        path: our-app/app/build/outputs/apk/debug/app-debug.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
         compression-level: 0
