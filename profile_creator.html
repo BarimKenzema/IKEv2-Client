@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IKEv2 Profile Creator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
+        input, textarea { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }
+        button { background: #4CAF50; color: white; padding: 12px; border: none; width: 100%; cursor: pointer; }
+        button:hover { background: #45a049; }
+        label { font-weight: bold; }
+        .output { background: #f0f0f0; padding: 15px; margin-top: 20px; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h2>IKEv2 Profile Creator</h2>
+    
+    <label>Profile Name:</label>
+    <input type="text" id="name" placeholder="Iran VPN 1" />
+    
+    <label>Server IP:</label>
+    <input type="text" id="server" placeholder="212.8.249.81" />
+    
+    <label>Username:</label>
+    <input type="text" id="username" placeholder="gecko_ff331bbd0b5f18c9c2a0479bf8f009aa" />
+    
+    <label>Password:</label>
+    <input type="text" id="password" placeholder="38531934" />
+    
+    <label>CA Certificate:</label>
+    <textarea id="ca_cert" rows="10" placeholder="-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----"></textarea>
+    
+    <label>IKE Proposal:</label>
+    <input type="text" id="ike_proposal" value="aes256-sha512-modp4096" />
+    
+    <label>ESP Proposal:</label>
+    <input type="text" id="esp_proposal" value="aes256-sha512" />
+    
+    <label>DNS:</label>
+    <input type="text" id="dns" value="1.1.1.1" />
+    
+    <label>Expiration Date (YYYY-MM-DD):</label>
+    <input type="date" id="expire_date" />
+    
+    <button onclick="createProfile()">Create Encrypted .ikev2 File</button>
+    
+    <div id="output" class="output" style="display:none;">
+        <h3>Encrypted Profile:</h3>
+        <p id="encrypted"></p>
+        <button onclick="downloadProfile()">Download .ikev2 File</button>
+    </div>
+    
+    <script>
+        const MASTER_KEY = "IKEv2SecureProfileKey2025"; // Must match Crypto.java
+        
+        function createProfile() {
+            const profile = {
+                name: document.getElementById('name').value,
+                server: document.getElementById('server').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                ca_cert: document.getElementById('ca_cert').value,
+                ike_proposal: document.getElementById('ike_proposal').value,
+                esp_proposal: document.getElementById('esp_proposal').value,
+                dns: document.getElementById('dns').value,
+                expire_date: document.getElementById('expire_date').value
+            };
+            
+            const json = JSON.stringify(profile);
+            const key = CryptoJS.SHA256(MASTER_KEY).toString().substring(0, 32);
+            const encrypted = CryptoJS.AES.encrypt(json, CryptoJS.enc.Utf8.parse(key), {
+                iv: CryptoJS.enc.Utf8.parse('0000000000000000'),
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            }).toString();
+            
+            document.getElementById('encrypted').textContent = encrypted;
+            document.getElementById('output').style.display = 'block';
+            window.encryptedData = encrypted;
+            window.profileName = profile.name;
+        }
+        
+        function downloadProfile() {
+            const blob = new Blob([window.encryptedData], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = window.profileName + '.ikev2';
+            a.click();
+        }
+    </script>
+</body>
+</html>
