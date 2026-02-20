@@ -2,93 +2,161 @@
 <html>
 <head>
     <title>IKEv2 Profile Creator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px; }
-        input, textarea { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }
-        button { background: #4CAF50; color: white; padding: 12px; border: none; width: 100%; cursor: pointer; }
+        body { font-family: Arial; max-width: 600px; margin: 30px auto; padding: 15px; background: #f5f5f5; }
+        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input, textarea { width: 100%; padding: 10px; margin: 5px 0 15px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #4CAF50; color: white; padding: 14px; border: none; width: 100%; cursor: pointer; border-radius: 5px; font-size: 16px; margin-top: 10px; }
         button:hover { background: #45a049; }
-        label { font-weight: bold; }
-        .output { background: #f0f0f0; padding: 15px; margin-top: 20px; word-wrap: break-word; }
+        button.copy { background: #2196F3; }
+        button.copy:hover { background: #1976D2; }
+        label { font-weight: bold; display: block; margin-top: 5px; }
+        .output { background: white; padding: 20px; margin-top: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        textarea.result { background: #f0f0f0; font-family: monospace; font-size: 12px; }
+        h2 { text-align: center; color: #333; }
     </style>
 </head>
 <body>
     <h2>IKEv2 Profile Creator</h2>
     
-    <label>Profile Name:</label>
-    <input type="text" id="name" placeholder="Iran VPN 1" />
-    
-    <label>Server IP:</label>
-    <input type="text" id="server" placeholder="212.8.249.81" />
-    
-    <label>Username:</label>
-    <input type="text" id="username" placeholder="gecko_ff331bbd0b5f18c9c2a0479bf8f009aa" />
-    
-    <label>Password:</label>
-    <input type="text" id="password" placeholder="38531934" />
-    
-    <label>CA Certificate:</label>
-    <textarea id="ca_cert" rows="10" placeholder="-----BEGIN CERTIFICATE-----
-...
+    <div class="card">
+        <label>Profile Name:</label>
+        <input type="text" id="name" placeholder="Iran VPN 1" />
+        
+        <label>Server IP:</label>
+        <input type="text" id="server" placeholder="212.8.249.81" />
+        
+        <label>Username:</label>
+        <input type="text" id="username" placeholder="gecko_ff331bbd0b5f18c9c2a0479bf8f009aa" />
+        
+        <label>Password:</label>
+        <input type="text" id="password" placeholder="38531934" />
+        
+        <label>CA Certificate (paste the full PEM block):</label>
+        <textarea id="ca_cert" rows="8" placeholder="-----BEGIN CERTIFICATE-----
+MIIDKjCCAhKgAwIBAgI...
 -----END CERTIFICATE-----"></textarea>
-    
-    <label>IKE Proposal:</label>
-    <input type="text" id="ike_proposal" value="aes256-sha512-modp4096" />
-    
-    <label>ESP Proposal:</label>
-    <input type="text" id="esp_proposal" value="aes256-sha512" />
-    
-    <label>DNS:</label>
-    <input type="text" id="dns" value="1.1.1.1" />
-    
-    <label>Expiration Date & Time:</label>
-    <input type="datetime-local" id="expire_datetime" />
-    
-    <button onclick="createProfile()">Create Encrypted .ikev2 File</button>
+        
+        <label>IKE Proposal:</label>
+        <input type="text" id="ike_proposal" value="aes256-sha512-modp4096" />
+        
+        <label>ESP Proposal:</label>
+        <input type="text" id="esp_proposal" value="aes256-sha512" />
+        
+        <label>DNS:</label>
+        <input type="text" id="dns" value="1.1.1.1" />
+        
+        <label>Expiration Date and Time:</label>
+        <input type="datetime-local" id="expire_datetime" />
+        
+        <button onclick="createProfile()">Create Encrypted Profile</button>
+    </div>
     
     <div id="output" class="output" style="display:none;">
-        <h3>Encrypted Profile:</h3>
-        <p id="encrypted"></p>
-        <button onclick="downloadProfile()">Download .ikev2 File</button>
+        <h3>Encrypted Profile</h3>
+        <p>Copy this text and paste it in the app using "Import from Clipboard":</p>
+        <textarea class="result" id="encrypted" rows="6" readonly onclick="this.select()"></textarea>
+        <button class="copy" onclick="copyToClipboard()">Copy to Clipboard</button>
+        <button onclick="downloadProfile()">Download as .ikev2 File</button>
     </div>
     
     <script>
-        const MASTER_KEY = "IKEv2SecureProfileKey2025"; // Must match Crypto.java
+        function strToBytes(str) {
+            var bytes = [];
+            for (var i = 0; i < str.length; i++) {
+                bytes.push(str.charCodeAt(i));
+            }
+            return bytes;
+        }
         
-        function createProfile() {
-            const profile = {
-                name: document.getElementById('name').value,
-                server: document.getElementById('server').value,
+        function bytesToBase64(bytes) {
+            var binary = '';
+            for (var i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+        
+        function sha256(str) {
+            var bytes = strToBytes(str);
+            return crypto.subtle.digest('SHA-256', new Uint8Array(bytes));
+        }
+        
+        async function aesEncrypt(plainText, masterKey) {
+            var keyHash = await sha256(masterKey);
+            var keyBytes = new Uint8Array(keyHash).slice(0, 16);
+            var iv = new Uint8Array(16); // all zeros
+            
+            var key = await crypto.subtle.importKey(
+                'raw', keyBytes, {name: 'AES-CBC'}, false, ['encrypt']
+            );
+            
+            var encoder = new TextEncoder();
+            var data = encoder.encode(plainText);
+            
+            var encrypted = await crypto.subtle.encrypt(
+                {name: 'AES-CBC', iv: iv}, key, data
+            );
+            
+            var encArray = new Uint8Array(encrypted);
+            var result = [];
+            for (var i = 0; i < encArray.length; i++) {
+                result.push(encArray[i]);
+            }
+            return bytesToBase64(result);
+        }
+        
+        async function createProfile() {
+            var name = document.getElementById('name').value;
+            var server = document.getElementById('server').value;
+            var expire = document.getElementById('expire_datetime').value;
+            
+            if (!name || !server || !expire) {
+                alert('Please fill in at least: Name, Server, and Expiration Date');
+                return;
+            }
+            
+            var profile = {
+                name: name,
+                server: server,
                 username: document.getElementById('username').value,
                 password: document.getElementById('password').value,
                 ca_cert: document.getElementById('ca_cert').value,
                 ike_proposal: document.getElementById('ike_proposal').value,
                 esp_proposal: document.getElementById('esp_proposal').value,
                 dns: document.getElementById('dns').value,
-                expire_datetime: document.getElementById('expire_datetime').value
+                expire_datetime: expire
             };
             
-            const json = JSON.stringify(profile);
-            const key = CryptoJS.SHA256(MASTER_KEY).toString().substring(0, 32);
-            const encrypted = CryptoJS.AES.encrypt(json, CryptoJS.enc.Utf8.parse(key), {
-                iv: CryptoJS.enc.Utf8.parse('0000000000000000'),
-                mode: CryptoJS.mode.CBC,
-                padding: CryptoJS.pad.Pkcs7
-            }).toString();
+            var json = JSON.stringify(profile);
+            var masterKey = "IKEv2SecureProfileKey2025";
             
-            document.getElementById('encrypted').textContent = encrypted;
-            document.getElementById('output').style.display = 'block';
-            window.encryptedData = encrypted;
-            window.profileName = profile.name;
+            try {
+                var encrypted = await aesEncrypt(json, masterKey);
+                document.getElementById('encrypted').value = encrypted;
+                document.getElementById('output').style.display = 'block';
+                window.encryptedData = encrypted;
+                window.profileName = name;
+            } catch (e) {
+                alert('Encryption error: ' + e.message);
+            }
+        }
+        
+        function copyToClipboard() {
+            var text = document.getElementById('encrypted');
+            text.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard!');
         }
         
         function downloadProfile() {
-            const blob = new Blob([window.encryptedData], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            var blob = new Blob([window.encryptedData], {type: 'text/plain'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
             a.href = url;
             a.download = window.profileName + '.ikev2';
             a.click();
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
