@@ -60,9 +60,25 @@ jobs:
         fi
 
     - name: Build debug APK
-      run: ./gradlew assembleDebug --stacktrace 2>&1 | tail -100
+      run: |
+        ./gradlew assembleDebug --stacktrace 2>&1 | tee build_output.txt
+        echo "=== LAST 200 LINES ==="
+        tail -200 build_output.txt
+
+    - name: Show full error on failure
+      if: failure()
+      run: |
+        echo "=== FULL BUILD OUTPUT ==="
+        cat build_output.txt 2>/dev/null || echo "No build output file"
+        echo ""
+        echo "=== CHECKING FILES ==="
+        find app/src -name "*.java" -type f
+        echo ""
+        echo "=== CHECKING LIBS ==="
+        find app/src/main/jniLibs -type f 2>/dev/null || echo "No jniLibs"
 
     - name: Upload APK
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: IKEv2-Client
