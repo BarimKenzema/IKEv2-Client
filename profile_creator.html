@@ -41,8 +41,8 @@
     <label>DNS:</label>
     <input type="text" id="dns" value="1.1.1.1" />
     
-    <label>Expiration Date (YYYY-MM-DD):</label>
-    <input type="date" id="expire_date" />
+    <label>Expiration Date & Time:</label>
+    <input type="datetime-local" id="expire_datetime" />
     
     <button onclick="createProfile()">Create Encrypted .ikev2 File</button>
     
@@ -65,7 +65,7 @@
                 ike_proposal: document.getElementById('ike_proposal').value,
                 esp_proposal: document.getElementById('esp_proposal').value,
                 dns: document.getElementById('dns').value,
-                expire_date: document.getElementById('expire_date').value
+                expire_datetime: document.getElementById('expire_datetime').value
             };
             
             const json = JSON.stringify(profile);
