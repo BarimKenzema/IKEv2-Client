@@ -1,9 +1,7 @@
-name: Build APK
+name: Build IKEv2 Client
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
@@ -12,32 +10,87 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout our code
       uses: actions/checkout@v4
-    
+      with:
+        path: our-app
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-    
-    - name: Setup Gradle 8.2
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install NDK
+      run: sdkmanager "ndk;25.2.9519653"
+
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bison flex gperf
+
+    - name: Clone strongSwan
+      run: |
+        git clone --depth 1 --branch 6.0.0 https://github.com/strongswan/strongswan.git strongswan-src
+
+    - name: Build strongSwan native libraries
+      run: |
+        cd strongswan-src
+        export ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653
+        cd src/frontends/android
+        
+        # Create local.properties
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+        echo "ndk.dir=$ANDROID_NDK_ROOT" >> local.properties
+        
+        # Build the native libraries
+        cd app/src/main/jni
+        $ANDROID_NDK_ROOT/ndk-build APP_ABI="arm64-v8a armeabi-v7a" -j$(nproc)
+
+    - name: Copy native libraries to our project
+      run: |
+        mkdir -p our-app/app/src/main/jniLibs/arm64-v8a
+        mkdir -p our-app/app/src/main/jniLibs/armeabi-v7a
+        
+        cp strongswan-src/src/frontends/android/app/src/main/libs/arm64-v8a/*.so our-app/app/src/main/jniLibs/arm64-v8a/
+        cp strongswan-src/src/frontends/android/app/src/main/libs/armeabi-v7a/*.so our-app/app/src/main/jniLibs/armeabi-v7a/
+
+    - name: Copy strongSwan Java sources to our project
+      run: |
+        # Copy the strongSwan Android Java sources we need
+        SS_JAVA=strongswan-src/src/frontends/android/app/src/main/java/org/strongswan/android
+        OUR_JAVA=our-app/app/src/main/java/org/strongswan/android
+        
+        mkdir -p $OUR_JAVA
+        cp -r $SS_JAVA/data $OUR_JAVA/
+        cp -r $SS_JAVA/logic $OUR_JAVA/
+        cp -r $SS_JAVA/security $OUR_JAVA/
+        cp -r $SS_JAVA/utils $OUR_JAVA/
+        
+        # Copy AIDL files
+        SS_AIDL=strongswan-src/src/frontends/android/app/src/main/aidl
+        OUR_AIDL=our-app/app/src/main/aidl
+        mkdir -p $OUR_AIDL
+        cp -r $SS_AIDL/* $OUR_AIDL/
+
+    - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
         gradle-version: '8.2'
-    
-    - name: Create Gradle wrapper
-      run: gradle wrapper --gradle-version 8.2
-    
-    - name: Grant execute permission
-      run: chmod +x gradlew
-    
-    - name: Build debug APK
-      run: ./gradlew assembleDebug --stacktrace
-    
-    - name: Upload Debug APK
+
+    - name: Build APK
+      run: |
+        cd our-app
+        gradle wrapper --gradle-version 8.2
+        chmod +x gradlew
+        ./gradlew assembleDebug --stacktrace
+
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        name: IKEv2-Client
+        path: our-app/app/build/outputs/apk/debug/app-debug.apk
         compression-level: 0
