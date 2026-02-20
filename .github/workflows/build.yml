@@ -29,53 +29,15 @@ jobs:
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
 
-    - name: Download strongSwan APK and extract libraries
-      run: |
-        wget -q "https://f-droid.org/repo/org.strongswan.android_76.apk" -O strongswan.apk || true
-
-        if [ ! -f strongswan.apk ]; then
-          echo "Trying alternative download..."
-          wget -q "https://f-droid.org/repo/org.strongswan.android_75.apk" -O strongswan.apk || true
-        fi
-
-        if [ -f strongswan.apk ]; then
-          mkdir -p strongswan_extracted
-          cd strongswan_extracted
-          unzip -o ../strongswan.apk "lib/*" 2>/dev/null || true
-
-          mkdir -p ../app/src/main/jniLibs/arm64-v8a
-          mkdir -p ../app/src/main/jniLibs/armeabi-v7a
-
-          cp lib/arm64-v8a/*.so ../app/src/main/jniLibs/arm64-v8a/ 2>/dev/null || true
-          cp lib/armeabi-v7a/*.so ../app/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || true
-
-          echo "=== arm64-v8a libraries ==="
-          ls -la ../app/src/main/jniLibs/arm64-v8a/ 2>/dev/null || echo "None"
-          echo "=== armeabi-v7a libraries ==="
-          ls -la ../app/src/main/jniLibs/armeabi-v7a/ 2>/dev/null || echo "None"
-          cd ..
-        else
-          echo "ERROR: Could not download strongSwan APK"
-          exit 1
-        fi
-
     - name: Build debug APK
       run: |
         ./gradlew assembleDebug --stacktrace 2>&1 | tee build_output.txt
-        echo "=== LAST 200 LINES ==="
-        tail -200 build_output.txt
+        echo "=== LAST 50 LINES ==="
+        tail -50 build_output.txt
 
     - name: Show full error on failure
       if: failure()
-      run: |
-        echo "=== FULL BUILD OUTPUT ==="
-        cat build_output.txt 2>/dev/null || echo "No build output file"
-        echo ""
-        echo "=== CHECKING FILES ==="
-        find app/src -name "*.java" -type f
-        echo ""
-        echo "=== CHECKING LIBS ==="
-        find app/src/main/jniLibs -type f 2>/dev/null || echo "No jniLibs"
+      run: cat build_output.txt 2>/dev/null || echo "No output"
 
     - name: Upload APK
       if: success()
