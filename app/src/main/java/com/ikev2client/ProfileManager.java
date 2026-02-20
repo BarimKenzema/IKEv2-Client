@@ -34,27 +34,40 @@ public class ProfileManager {
         @SerializedName("dns")
         public String dns;
         
-        @SerializedName("expire_date")
-        public String expireDate; // Format: "2025-03-20"
+        @SerializedName("expire_datetime")
+        public String expireDatetime; // Format: "2025-03-20T14:30"
         
         public boolean isExpired() {
             try {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                Date expiry = sdf.parse(expireDate);
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
+                Date expiry = sdf.parse(expireDatetime);
                 return new Date().after(expiry);
             } catch (Exception e) {
                 return true; // If date parse fails, consider expired
             }
         }
         
-        public int daysRemaining() {
+        public String timeRemaining() {
             try {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                Date expiry = sdf.parse(expireDate);
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
+                Date expiry = sdf.parse(expireDatetime);
                 long diff = expiry.getTime() - System.currentTimeMillis();
-                return (int) (diff / (1000 * 60 * 60 * 24));
+                
+                if (diff < 0) return "Expired";
+                
+                long days = diff / (1000 * 60 * 60 * 24);
+                long hours = (diff / (1000 * 60 * 60)) % 24;
+                long minutes = (diff / (1000 * 60)) % 60;
+                
+                if (days > 0) {
+                    return days + "d " + hours + "h";
+                } else if (hours > 0) {
+                    return hours + "h " + minutes + "m";
+                } else {
+                    return minutes + "m";
+                }
             } catch (Exception e) {
-                return 0;
+                return "Unknown";
             }
         }
     }
