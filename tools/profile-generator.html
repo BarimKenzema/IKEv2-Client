@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IKEv2 VPN Profile Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            color: #60a5fa;
+            font-size: 28px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .card h2 {
+            color: #60a5fa;
+            margin-bottom: 16px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .profile-entry {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #334155;
+            position: relative;
+        }
+        .profile-entry .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .profile-entry .profile-number {
+            font-weight: bold;
+            color: #60a5fa;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        input, select, textarea {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: #e2e8f0;
+            font-size: 14px;
+            width: 100%;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #16a34a;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .btn-secondary {
+            background: #475569;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #64748b;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .passphrase-section {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 16px;
+        }
+        .passphrase-section .form-group {
+            flex: 1;
+        }
+        .output-section {
+            display: none;
+        }
+        .output-section.visible {
+            display: block;
+        }
+        .output-text {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #86efac;
+            user-select: all;
+        }
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 16px 0;
+        }
+        .qr-container canvas {
+            display: block;
+        }
+        .status-msg {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .status-msg.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid #22c55e;
+            color: #86efac;
+        }
+        .status-msg.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+        }
+        .expiry-presets {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+        .expiry-presets button {
+            padding: 4px 10px;
+            font-size: 11px;
+            background: #334155;
+            color: #94a3b8;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .expiry-presets button:hover {
+            background: #475569;
+            color: #e2e8f0;
+        }
+        .profile-count-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .passphrase-section {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔐 IKEv2 VPN Profile Generator</h1>
+    <p class="subtitle">Create encrypted, time-limited VPN profiles for the IKEv2 Client app</p>
+
+    <!-- PROFILES SECTION -->
+    <div class="card">
+        <h2>
+            📋 VPN Profiles
+            <span class="profile-count-badge" id="profileCount">1 profile</span>
+        </h2>
+
+        <div id="profilesContainer">
+            <!-- Profile entries will be added here -->
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-secondary" onclick="addProfile()">+ Add Another Profile</button>
+        </div>
+    </div>
+
+    <!-- ENCRYPTION SECTION -->
+    <div class="card">
+        <h2>🔑 Encryption Settings</h2>
+
+        <div class="passphrase-section">
+            <div class="form-group">
+                <label>Encryption Passphrase</label>
+                <input type="password" id="passphrase" placeholder="Enter a strong passphrase">
+            </div>
+            <div class="form-group">
+                <label>Confirm Passphrase</label>
+                <input type="password" id="passphraseConfirm" placeholder="Confirm passphrase">
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-success" onclick="encryptProfiles()">🔒 Encrypt & Generate</button>
+        </div>
+
+        <div id="statusMsg"></div>
+    </div>
+
+    <!-- OUTPUT SECTION -->
+    <div class="card output-section" id="outputSection">
+        <h2>📤 Encrypted Output</h2>
+
+        <label>Encrypted Data (copy this or scan QR):</label>
+        <div class="output-text" id="encryptedOutput"></div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+            <button class="btn btn-secondary" onclick="downloadAsFile()">💾 Download as File</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <label>QR Code (scan with the app):</label>
+            <div class="qr-container" id="qrContainer">
+                <canvas id="qrCanvas"></canvas>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 8px;">
+                ⚠️ QR codes have a data limit (~4KB). For many profiles, use paste or file import instead.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+<script>
+    let profileCounter = 0;
+
+    // Initialize with one profile
+    window.addEventListener('DOMContentLoaded', () => {
+        addProfile();
+    });
+
+    function addProfile() {
+        profileCounter++;
+        const container = document.getElementById('profilesContainer');
+        const id = profileCounter;
+
+        // Default expiry: 24 hours from now
+        const defaultExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const expiryStr = formatDateForInput(defaultExpiry);
+
+        const html = `
+            <div class="profile-entry" id="profile-${id}">
+                <div class="profile-header">
+                    <span class="profile-number">Profile #${id}</span>
+                    ${profileCounter > 1 ? `<button class="btn btn-danger" onclick="removeProfile(${id})">✕ Remove</button>` : ''}
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Profile Name *</label>
+                        <input type="text" id="name-${id}" placeholder="e.g., US Server 1">
+                    </div>
+                    <div class="form-group">
+                        <label>Server Address *</label>
+                        <input type="text" id="server-${id}" placeholder="e.g., vpn.example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Remote ID</label>
+                        <input type="text" id="remoteId-${id}" placeholder="Usually same as server address">
+                    </div>
+                    <div class="form-group">
+                        <label>Auth Method</label>
+                        <select id="authMethod-${id}">
+                            <option value="eap-mschapv2">EAP-MSCHAPv2</option>
+                            <option value="eap-tls">EAP-TLS</option>
+                            <option value="psk">Pre-Shared Key (PSK)</option>
+                            <option value="pubkey">Certificate</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Username *</label>
+                        <input type="text" id="username-${id}" placeholder="VPN username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password *</label>
+                        <input type="password" id="password-${id}" placeholder="VPN password">
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date & Time (UTC) *</label>
+                        <input type="datetime-local" id="expiry-${id}" value="${expiryStr}">
+                        <div class="expiry-presets">
+                            <button onclick="setExpiry(${id}, 30)">30 min</button>
+                            <button onclick="setExpiry(${id}, 60)">1 hour</button>
+                            <button onclick="setExpiry(${id}, 360)">6 hours</button>
+                            <button onclick="setExpiry(${id}, 1440)">24 hours</button>
+                            <button onclick="setExpiry(${id}, 4320)">3 days</button>
+                            <button onclick="setExpiry(${id}, 10080)">7 days</button>
+                            <button onclick="setExpiry(${id}, 43200)">30 days</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>MTU</label>
+                        <input type="number" id="mtu-${id}" value="1400" min="1200" max="1500">
+                    </div>
+                    <div class="form-group">
+                        <label>Pre-Shared Key (if PSK auth)</label>
+                        <input type="text" id="psk-${id}" placeholder="Only for PSK auth method">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>CA Certificate (PEM format, optional)</label>
+                        <textarea id="caCert-${id}" placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"></textarea>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', html);
+        updateProfileCount();
+    }
+
+    function removeProfile(id) {
+        const el = document.getElementById(`profile-${id}`);
+        if (el) {
+            el.remove();
+            updateProfileCount();
+        }
+    }
+
+    function updateProfileCount() {
+        const count = document.querySelectorAll('.profile-entry').length;
+        document.getElementById('profileCount').textContent = `${count} profile${count !== 1 ? 's' : ''}`;
+    }
+
+    function formatDateForInput(date) {
+        const pad = n => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function setExpiry(id, minutes) {
+        const expiry = new Date(Date.now() + minutes * 60 * 1000);
+        document.getElementById(`expiry-${id}`).value = formatDateForInput(expiry);
+    }
+
+    function collectProfiles() {
+        const entries = document.querySelectorAll('.profile-entry');
+        const profiles = [];
+
+        for (const entry of entries) {
+            const id = entry.id.split('-')[1];
+            const name = document.getElementById(`name-${id}`).value.trim();
+            const server = document.getElementById(`server-${id}`).value.trim();
+            const remoteId = document.getElementById(`remoteId-${id}`).value.trim() || server;
+            const authMethod = document.getElementById(`authMethod-${id}`).value;
+            const username = document.getElementById(`username-${id}`).value.trim();
+            const password = document.getElementById(`password-${id}`).value;
+            const expiryInput = document.getElementById(`expiry-${id}`).value;
+            const mtu = parseInt(document.getElementById(`mtu-${id}`).value) || 1400;
+            const psk = document.getElementById(`psk-${id}`).value.trim();
+            const caCert = document.getElementById(`caCert-${id}`).value.trim();
+
+            if (!name || !server || !username || !password || !expiryInput) {
+                throw new Error(`Profile #${id}: Name, Server, Username, Password, and Expiry are required.`);
+            }
+
+            // Convert to ISO 8601 UTC
+            const expiryDate = new Date(expiryInput);
+            const expiresAt = expiryDate.toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+            profiles.push({
+                id: crypto.randomUUID ? crypto.randomUUID() : generateUUID(),
+                name,
+                server,
+                remote_id: remoteId,
+                auth_method: authMethod,
+                username,
+                password,
+                expires_at: expiresAt,
+                mtu,
+                psk: psk || null,
+                ca_cert: caCert || null,
+                split_tunneling: false,
+                allowed_apps: null
+            });
+        }
+
+        return profiles;
+    }
+
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    async function deriveKey(passphrase) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(passphrase);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        return crypto.subtle.importKey(
+            'raw',
+            hashBuffer,
+            { name: 'AES-GCM' },
+            false,
+            ['encrypt']
+        );
+    }
+
+    async function encryptProfiles() {
+        const statusEl = document.getElementById('statusMsg');
+
+        try {
+            // Validate passphrase
+            const passphrase = document.getElementById('passphrase').value;
+            const passphraseConfirm = document.getElementById('passphraseConfirm').value;
+
+            if (!passphrase) {
+                throw new Error('Passphrase is required');
+            }
+            if (passphrase !== passphraseConfirm) {
+                throw new Error('Passphrases do not match');
+            }
+            if (passphrase.length < 4) {
+                throw new Error('Passphrase must be at least 4 characters');
+            }
+
+            // Collect profiles
+            const profiles = collectProfiles();
+
+            // Create JSON payload
+            const payload = JSON.stringify({ profiles });
+
+            // Encrypt
+            const key = await deriveKey(passphrase);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encoder = new TextEncoder();
+            const plaintext = encoder.encode(payload);
+
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                key,
+                plaintext
+            );
+
+            // Combine IV + ciphertext
+            const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+            combined.set(iv, 0);
+            combined.set(new Uint8Array(ciphertext), iv.length);
+
+            // Base64 encode
+            const base64 = btoa(String.fromCharCode(...combined));
+
+            // Display output
+            document.getElementById('encryptedOutput').textContent = base64;
+            document.getElementById('outputSection').classList.add('visible');
+
+            // Generate QR code
+            generateQR(base64);
+
+            statusEl.className = 'status-msg success';
+            statusEl.textContent = `✅ Successfully encrypted ${profiles.length} profile(s). Data size: ${base64.length} chars.`;
+
+            // Scroll to output
+            document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
+
+        } catch (error) {
+            statusEl.className = 'status-msg error';
+            statusEl.textContent = `❌ Error: ${error.message}`;
+        }
+    }
+
+    function generateQR(data) {
+        const canvas = document.getElementById('qrCanvas');
+        const container = document.getElementById('qrContainer');
+
+        if (data.length > 4000) {
+            container.innerHTML = '<p style="color: #666; padding: 20px;">⚠️ Data too large for QR code (' + data.length + ' chars).<br>Use copy/paste or file download instead.</p>';
+            return;
+        }
+
+        // Reset canvas
+        container.innerHTML = '<canvas id="qrCanvas"></canvas>';
+        const newCanvas = document.getElementById('qrCanvas');
+
+        if (typeof QRCode !== 'undefined') {
+            QRCode.toCanvas(newCanvas, data, {
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                },
+                errorCorrectionLevel: 'L'
+            }, function(error) {
+                if (error) {
+                    container.innerHTML = '<p style="color: #e74c3c;">QR generation failed: ' + error.message + '</p>';
+                }
+            });
+        } else {
+            container.innerHTML = '<p style="color: #e74c3c;">QR library not loaded. Use copy/paste instead.</p>';
+        }
+    }
+
+    function copyToClipboard() {
+        const text = document.getElementById('encryptedOutput').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('✅ Copied to clipboard!');
+        }).catch(() => {
+            // Fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('✅ Copied to clipboard!');
+        });
+    }
+
+    function downloadAsFile() {
+        const text = document.getElementById('encryptedOutput').textContent;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `vpn-profiles-${new Date().toISOString().slice(0, 10)}.encrypted`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+</script>
+
+</body>
+</html>
