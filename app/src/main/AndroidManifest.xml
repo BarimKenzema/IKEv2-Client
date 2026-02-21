@@ -4,16 +4,16 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
 
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
+
+    <queries>
+        <package android:name="org.strongswan.android" />
+    </queries>
 
     <application
         android:name=".App"
@@ -39,14 +39,15 @@
             android:name=".ScanQrActivity"
             android:exported="false" />
 
-        <service
-            android:name=".VpnConnectionService"
-            android:foregroundServiceType="specialUse"
-            android:exported="false">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="vpn_connection_monitor" />
-        </service>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
