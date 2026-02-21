@@ -24,6 +24,9 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
+    - name: Accept Android SDK licenses
+      run: yes | sdkmanager --licenses || true
+
     - name: Install Gradle
       run: |
         wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip
@@ -32,15 +35,22 @@ jobs:
 
     - name: Generate Gradle Wrapper
       run: |
-        gradle wrapper --gradle-version 8.5
+        gradle wrapper --gradle-version 8.5 --no-configuration-cache
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
 
     - name: Build Debug APK
       run: |
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --no-configuration-cache
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease
+      run: |
+        ./gradlew assembleRelease --no-configuration-cache
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
