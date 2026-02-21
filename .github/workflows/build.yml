@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y autoconf automake libtool pkg-config gettext python3 bison flex gperf perl curl unzip git libssl-dev
+          sudo apt-get install -y autoconf automake libtool pkg-config gettext python3 bison flex gperf perl curl unzip git libssl-dev libgmp-dev
 
       - name: Set environment
         run: |
@@ -42,89 +42,79 @@ jobs:
         run: |
           cd ss-full
           ./autogen.sh
-          ./configure --enable-openssl --enable-eap-identity --enable-eap-mschapv2 --enable-eap-tls --enable-eap-ttls --enable-eap-tnc
-          
-          echo "=== Running make to generate source files ==="
-          make -j$(nproc) || true
-          
-          echo ""
-          echo "=== Verify generated files ==="
-          for f in src/libstrongswan/asn1/oid.c src/libstrongswan/asn1/oid.h; do
-            if [ -f "$f" ]; then
-              echo "OK   $f ($(wc -l < $f) lines)"
-            else
-              echo "MISS $f - trying to generate manually"
-            fi
-          done
+          ./configure \
+            --enable-openssl \
+            --enable-eap-identity \
+            --enable-eap-mschapv2 \
+            --enable-eap-md5 \
+            --enable-eap-gtc \
+            --enable-eap-tls \
+            --enable-eap-ttls \
+            --enable-eap-tnc
 
-      - name: Generate any remaining missing files
-        run: |
-          cd ss-full
+          make -j$(nproc) 2>&1 | tail -30 || echo "Host make done (partial failures OK)"
 
-          # Generate oid.c and oid.h if make didn't create them
+          # Ensure oid.c exists
           if [ ! -f src/libstrongswan/asn1/oid.c ]; then
-            echo "Generating oid.c and oid.h manually..."
             cd src/libstrongswan/asn1
-            if [ -f oid.pl ] && [ -f oid.txt ]; then
-              perl oid.pl oid.txt oid.c oid.h
-              echo "Generated oid.c ($(wc -l < oid.c) lines)"
-            else
-              echo "ERROR: oid.pl or oid.txt not found"
-              ls -la
-              exit 1
-            fi
+            perl oid.pl oid.txt oid.c oid.h
             cd ../../..
           fi
 
-          # Verify Android.common.mk exists
+          # Ensure Android.common.mk exists
           if [ ! -f Android.common.mk ]; then
-            if [ -f Android.common.mk.in ]; then
-              echo "Generating Android.common.mk from template..."
-              sed "s/@PACKAGE_VERSION@/$(grep PACKAGE_VERSION= configure | head -1 | sed "s/.*='\(.*\)'/\1/")/g" Android.common.mk.in > Android.common.mk
-            else
-              VERSION=$(grep PACKAGE_VERSION= configure | head -1 | sed "s/.*='\(.*\)'/\1/")
-              echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
-            fi
-            echo "Created Android.common.mk:"
-            cat Android.common.mk
+            VERSION=$(sed -n "s/^PACKAGE_VERSION='\(.*\)'/\1/p" configure | head -1)
+            echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
           fi
 
-          echo ""
-          echo "=== List all generated .c files that Android.mk references ==="
-          # Check for other potentially generated files
-          ANDROID_MK="src/frontends/android/app/src/main/jni/Android.mk"
-          
-          # Find all .mk files that list source files
-          echo "Checking libstrongswan sources..."
-          grep "\.c" src/libstrongswan/Android.mk | head -30
-          
-          echo ""
-          echo "=== Verify all critical generated files ==="
-          for f in \
-            src/libstrongswan/asn1/oid.c \
-            src/libstrongswan/asn1/oid.h \
-            src/libstrongswan/plugins/openssl/openssl_plugin.c \
-            src/libstrongswan/plugins/pkcs1/pkcs1_plugin.c \
-            src/libstrongswan/plugins/pem/pem_plugin.c \
-            src/libstrongswan/plugins/x509/x509_plugin.c \
-            src/libstrongswan/plugins/xcbc/xcbc_plugin.c \
-            src/libstrongswan/plugins/nonce/nonce_plugin.c \
-            src/libstrongswan/plugins/kdf/kdf_plugin.c \
-            src/libstrongswan/plugins/revocation/revocation_plugin.c \
-            src/libcharon/plugins/eap_identity/eap_identity_plugin.c \
-            src/libcharon/plugins/eap_mschapv2/eap_mschapv2_plugin.c \
-            src/libcharon/plugins/eap_tls/eap_tls_plugin.c \
-            src/libcharon/plugins/eap_ttls/eap_ttls_plugin.c \
-            src/libcharon/plugins/eap_md5/eap_md5_plugin.c \
-            src/libcharon/plugins/eap_gtc/eap_gtc_plugin.c \
-            src/libcharon/plugins/eap_tnc/eap_tnc_plugin.c \
-            Android.common.mk; do
-            if [ -f "$f" ]; then
-              echo "OK   $f"
-            else
-              echo "MISS $f"
-            fi
+          echo "Generated files check:"
+          for f in Android.common.mk src/libstrongswan/asn1/oid.c src/libstrongswan/asn1/oid.h; do
+            [ -f "$f" ] && echo "OK   $f" || echo "MISS $f"
           done
+
+      - name: Disable BYOD to avoid missing TPM dependencies
+        run: |
+          cd ss-full
+
+          # Disable BYOD in Android.mk (removes libtpmtss, libtnccs, etc.)
+          JNI_MK="src/frontends/android/app/src/main/jni/Android.mk"
+          echo "=== Before: BYOD setting ==="
+          grep "strongswan_USE_BYOD" "${JNI_MK}"
+
+          sed -i 's/^strongswan_USE_BYOD := true/strongswan_USE_BYOD :=/' "${JNI_MK}"
+
+          echo "=== After: BYOD setting ==="
+          grep "strongswan_USE_BYOD" "${JNI_MK}"
+
+          # Also disable in Java code
+          JAVA_DIR="src/frontends/android/app/src/main/java/org/strongswan/android"
+          find "${JAVA_DIR}" -name "*.java" -exec grep -l "USE_BYOD" {} \; | while read f; do
+            echo "Patching $f"
+            sed -i 's/USE_BYOD = true/USE_BYOD = false/g' "$f"
+          done
+
+          # Show what the BYOD-related build list looks like now
+          echo ""
+          echo "=== Build modules (should NOT include libtpmtss) ==="
+          grep -A20 "strongswan_BUILD" "${JNI_MK}"
+
+      - name: Show all Android.mk dependencies
+        run: |
+          cd ss-full
+          echo "=== libtpmtss/Android.mk (the likely culprit) ==="
+          cat src/libtpmtss/Android.mk 2>/dev/null || echo "File not found"
+          echo ""
+          echo "=== libstrongswan shared lib deps ==="
+          grep "LOCAL_SHARED_LIBRARIES\|LOCAL_STATIC_LIBRARIES" src/libstrongswan/Android.mk || true
+          echo ""
+          echo "=== libcharon shared lib deps ==="
+          grep "LOCAL_SHARED_LIBRARIES\|LOCAL_STATIC_LIBRARIES" src/libcharon/Android.mk || true
+          echo ""
+          echo "=== libandroidbridge shared lib deps ==="
+          grep "LOCAL_SHARED_LIBRARIES\|LOCAL_STATIC_LIBRARIES" src/frontends/android/app/src/main/jni/libandroidbridge/Android.mk || true
+          echo ""
+          echo "=== libipsec shared lib deps ==="
+          grep "LOCAL_SHARED_LIBRARIES\|LOCAL_STATIC_LIBRARIES" src/libipsec/Android.mk || true
 
       - name: Download OpenSSL
         run: |
@@ -153,8 +143,6 @@ jobs:
               no-tests no-ui-console
             make -j$(nproc)
             make install_sw
-            echo "Built:"
-            find "${OUT_DIR}/lib" \( -name "*.so*" -o -name "*.a" \) -ls
             cd "${GITHUB_WORKSPACE}"
           }
 
@@ -185,71 +173,91 @@ jobs:
             echo "${ABI}: $(ls ${DEST}/)"
           done
 
-      - name: Create openssl/Android.mk
+      - name: Create openssl Android.mk
         run: |
-          OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
-          cat > "${OSSL}/Android.mk" << 'ENDMK'
-          LOCAL_PATH := $(call my-dir)
-
-          include $(CLEAR_VARS)
-          LOCAL_MODULE := libcrypto
-          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so
-          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
-          include $(PREBUILT_SHARED_LIBRARY)
-
-          include $(CLEAR_VARS)
-          LOCAL_MODULE := libssl
-          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so
-          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
-          include $(PREBUILT_SHARED_LIBRARY)
-          ENDMK
-
+          TARGET="ss-full/src/frontends/android/app/src/main/jni/openssl/Android.mk"
+          printf 'LOCAL_PATH := $(call my-dir)\n\n' > "${TARGET}"
+          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
+          printf 'LOCAL_MODULE := libcrypto\n' >> "${TARGET}"
+          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so\n' >> "${TARGET}"
+          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
+          printf 'include $(PREBUILT_SHARED_LIBRARY)\n\n' >> "${TARGET}"
+          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
+          printf 'LOCAL_MODULE := libssl\n' >> "${TARGET}"
+          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so\n' >> "${TARGET}"
+          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
+          printf 'include $(PREBUILT_SHARED_LIBRARY)\n' >> "${TARGET}"
           echo "=== openssl/Android.mk ==="
-          cat "${OSSL}/Android.mk"
+          cat "${TARGET}"
 
-      - name: Final verification
+      - name: Diagnostic ndk-build dry run
         run: |
-          cd ss-full
-          echo "=== Critical files check ==="
-          FAIL=0
-          for f in \
-            Android.common.mk \
-            src/libstrongswan/asn1/oid.c \
-            src/libstrongswan/asn1/oid.h \
-            src/frontends/android/app/src/main/jni/openssl/Android.mk \
-            src/frontends/android/app/src/main/jni/Android.mk; do
-            if [ -f "$f" ]; then
-              echo "OK   $f"
-            else
-              echo "FAIL $f"
-              FAIL=1
-            fi
-          done
-
+          cd ss-full/src/frontends/android/app/src/main/jni
+          echo "=== Testing ndk-build (dry run) ==="
+          ${ANDROID_NDK_HOME}/ndk-build \
+            NDK_PROJECT_PATH=null \
+            APP_BUILD_SCRIPT=$(pwd)/Android.mk \
+            NDK_APPLICATION_MK=$(pwd)/Application.mk \
+            APP_ABI=arm64-v8a \
+            NDK_DEBUG=1 \
+            APP_PLATFORM=android-21 \
+            NDK_OUT=/tmp/ndk-out \
+            NDK_LIBS_OUT=/tmp/ndk-libs \
+            -n -B 2>&1 | tail -5
           echo ""
-          echo "=== OpenSSL .so files ==="
-          find src/frontends/android/app/src/main/jni/openssl -name "*.so" -ls
-
-          if [ $FAIL -eq 1 ]; then
-            echo "ERROR: Missing critical files!"
-            exit 1
-          fi
+          echo "=== ndk-build dry run exit code: ${PIPESTATUS[0]} ==="
+          echo ""
+          # If it failed, show the error
+          ${ANDROID_NDK_HOME}/ndk-build \
+            NDK_PROJECT_PATH=null \
+            APP_BUILD_SCRIPT=$(pwd)/Android.mk \
+            NDK_APPLICATION_MK=$(pwd)/Application.mk \
+            APP_ABI=arm64-v8a \
+            NDK_DEBUG=1 \
+            APP_PLATFORM=android-21 \
+            NDK_OUT=/tmp/ndk-out \
+            NDK_LIBS_OUT=/tmp/ndk-libs \
+            -n -B 2>&1 | grep -i "undefined\|missing\|depends on\|error\|Stop\|cannot find" | head -20
+          echo ""
+          echo "Dry run complete"
 
       - name: Build APK
         run: |
           cd ss-full/src/frontends/android
           echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
-          echo "ndk.dir=${ANDROID_NDK_HOME}" >> local.properties
+
           set +e
           ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
           RESULT=${PIPESTATUS[0]}
           set -e
+
           if [ ${RESULT} -ne 0 ]; then
             echo ""
-            echo "============================================"
-            echo "BUILD FAILED - Error details:"
-            echo "============================================"
-            grep -n "No rule to make\|No such file\|error:\|undefined reference\|cannot find\|Stop\." "${GITHUB_WORKSPACE}/build.log" | grep -iv "ProcessException\|ExecException\|stacktrace\|--info\|help.gradle" | head -30
+            echo "##############################################"
+            echo "# BUILD FAILED"
+            echo "##############################################"
+            echo ""
+            echo "=== Missing module errors ==="
+            grep -i "depends on undefined\|missing dep\|undefined modules" "${GITHUB_WORKSPACE}/build.log" | head -10
+            echo ""
+            echo "=== C/C++ compilation errors ==="
+            grep "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter" | head -20
+            echo ""
+            echo "=== Make errors ==="
+            grep -E "^make:|Stop\.|No rule to make|cannot find" "${GITHUB_WORKSPACE}/build.log" | head -10
+            echo ""
+            echo "=== Linker errors ==="
+            grep "undefined reference\|cannot find -l" "${GITHUB_WORKSPACE}/build.log" | head -20
+            echo ""
+            echo "=== Last 40 lines before FAILED ==="
+            FAIL_LINE=$(grep -n "FAILED" "${GITHUB_WORKSPACE}/build.log" | head -1 | cut -d: -f1)
+            if [ -n "${FAIL_LINE}" ]; then
+              START=$((FAIL_LINE - 40))
+              [ $START -lt 1 ] && START=1
+              sed -n "${START},${FAIL_LINE}p" "${GITHUB_WORKSPACE}/build.log"
+            else
+              tail -50 "${GITHUB_WORKSPACE}/build.log"
+            fi
             exit 1
           fi
 
