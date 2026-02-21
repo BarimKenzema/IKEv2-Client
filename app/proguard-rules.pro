@@ -1,0 +1,3 @@
+-keep class org.strongswan.android.** { *; }
+-keep class com.ikev2client.model.** { *; }
+-dontwarn org.strongswan.**
