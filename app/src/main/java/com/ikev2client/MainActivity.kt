@@ -1,11 +1,9 @@
 package com.ikev2client
 
 import android.content.Intent
-import android.net.VpnService
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,18 +20,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var storage: ProfileStorage
     private lateinit var adapter: ProfileAdapter
-    private var pendingProfile: VpnProfile? = null
-
-    private val vpnPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            pendingProfile?.let { connectToProfile(it) }
-        } else {
-            Toast.makeText(this, "VPN permission denied", Toast.LENGTH_SHORT).show()
-        }
-        pendingProfile = null
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +51,6 @@ class MainActivity : AppCompatActivity() {
             refreshProfiles()
         }
 
-        // Listen for VPN state changes
         VpnConnectionService.stateListener = { state, message ->
             runOnUiThread {
                 updateConnectionStatus(state, message)
@@ -87,7 +72,6 @@ class MainActivity : AppCompatActivity() {
 
         val valid = profiles.count { !it.isExpired() }
         val expired = profiles.count { it.isExpired() }
-
         binding.tvProfileCount.text = "$valid active, $expired expired"
 
         if (profiles.isEmpty()) {
@@ -98,19 +82,16 @@ class MainActivity : AppCompatActivity() {
             binding.rvProfiles.visibility = View.VISIBLE
         }
 
-        // Update connection indicator on profiles
         val isConnected = VpnConnectionService.connectionState == VpnConnectionService.ConnectionState.CONNECTED
         adapter.setConnectionState(VpnConnectionService.currentProfileId, isConnected)
     }
 
     private fun onConnectClicked(profile: VpnProfile) {
-        // If already connected to this profile, disconnect
         if (VpnConnectionService.isRunning && VpnConnectionService.currentProfileId == profile.id) {
             disconnectVpn()
             return
         }
 
-        // If connected to another, disconnect first
         if (VpnConnectionService.isRunning) {
             disconnectVpn()
         }
@@ -120,14 +101,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Request VPN permission
-        val intent = VpnService.prepare(this)
-        if (intent != null) {
-            pendingProfile = profile
-            vpnPermissionLauncher.launch(intent)
-        } else {
-            connectToProfile(profile)
-        }
+        connectToProfile(profile)
     }
 
     private fun connectToProfile(profile: VpnProfile) {
@@ -182,7 +156,6 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Import") { _, _ ->
                 val encrypted = etEncrypted.text?.toString()?.trim() ?: ""
                 val passphrase = etPassphrase.text?.toString() ?: ""
-
                 if (encrypted.isEmpty() || passphrase.isEmpty()) {
                     Toast.makeText(this, "Both fields required", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
@@ -212,7 +185,6 @@ class MainActivity : AppCompatActivity() {
                     if (expired.isNotEmpty()) ", ${expired.size} expired skipped" else ""
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
             refreshProfiles()
-
         } catch (e: SecurityException) {
             Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
@@ -234,7 +206,7 @@ class MainActivity : AppCompatActivity() {
                 VpnConnectionService.ConnectionState.CONNECTED -> android.graphics.Color.parseColor("#4CAF50")
                 VpnConnectionService.ConnectionState.ERROR -> android.graphics.Color.parseColor("#F44336")
                 VpnConnectionService.ConnectionState.CONNECTING -> android.graphics.Color.parseColor("#FF9800")
-                else -> android.graphics.Color.parseColor("#888888")
+                else -> android.graphics.Color.parseColor("#BBDEFB")
             }
         )
 
