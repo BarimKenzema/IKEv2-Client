@@ -1,0 +1,103 @@
+name: Rebuild With StrongSwan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Clean repo
+      run: |
+        find . -maxdepth 1 -not -name '.git' -not -name '.github' -not -name '.' -exec rm -rf {} \;
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bison flex gperf python3
+
+    - name: Install Android SDK components
+      run: |
+        yes | sdkmanager "ndk;25.2.9519653" 2>/dev/null || true
+        yes | sdkmanager "platforms;android-34" 2>/dev/null || true
+        yes | sdkmanager "build-tools;34.0.0" 2>/dev/null || true
+
+    - name: Download strongSwan Android source
+      run: |
+        wget -q "https://download.strongswan.org/Android/strongSwan-2.5.2.tar.bz2" -O /tmp/ss.tar.bz2 || true
+        
+        if [ ! -f /tmp/ss.tar.bz2 ]; then
+          echo "Trying git clone instead..."
+          git clone --depth 1 --branch 5.9.11 https://github.com/strongswan/strongswan.git /tmp/strongswan-git
+          
+          # The Android app is inside the main repo
+          cp -r /tmp/strongswan-git/src/frontends/android/* /tmp/strongswan-android/
+        else
+          mkdir -p /tmp/strongswan-android
+          tar xjf /tmp/ss.tar.bz2 -C /tmp/strongswan-android --strip-components=1
+        fi
+        
+        echo "=== Contents ==="
+        ls /tmp/strongswan-android/ 2>/dev/null || echo "Check alternative path"
+
+    - name: Explore strongSwan Android structure
+      run: |
+        echo "=== Top level ==="
+        ls -la /tmp/strongswan-android/ 2>/dev/null
+        
+        echo "=== App dir ==="
+        find /tmp/strongswan-android -name "build.gradle" -type f 2>/dev/null | head -10
+        
+        echo "=== Java sources ==="
+        find /tmp/strongswan-android -name "*.java" -type f 2>/dev/null | head -20
+        
+        echo "=== JNI ==="
+        find /tmp/strongswan-android -name "Android.mk" -type f 2>/dev/null | head -10
+        
+        echo "=== Manifests ==="
+        find /tmp/strongswan-android -name "AndroidManifest.xml" -type f 2>/dev/null
+
+    - name: Find the correct project structure
+      run: |
+        # Find where the actual Android app project lives
+        echo "=== Looking for CharonVpnService ==="
+        find /tmp -name "CharonVpnService.java" -type f 2>/dev/null
+        
+        echo "=== Looking for settings.gradle ==="
+        find /tmp -name "settings.gradle" -type f 2>/dev/null
+        
+        echo "=== Looking for gradlew ==="
+        find /tmp -name "gradlew" -type f 2>/dev/null
+
+    - name: Report structure
+      run: |
+        echo "=== Full tree (depth 4) ==="
+        find /tmp/strongswan-android -maxdepth 4 -type f 2>/dev/null | head -100
+        find /tmp/strongswan-git/src/frontends/android -maxdepth 4 -type f 2>/dev/null | head -100
+
+    - name: Commit exploration results
+      run: |
+        # Save the exploration output so we can see it
+        echo "Exploration complete" > EXPLORATION.md
+        find /tmp/strongswan-android -maxdepth 5 -type f 2>/dev/null >> EXPLORATION.md || true
+        find /tmp/strongswan-git/src/frontends/android -maxdepth 5 -type f 2>/dev/null >> EXPLORATION.md || true
+        
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add -A
+        git commit -m "Exploration of strongSwan structure" || true
+        git push || true
