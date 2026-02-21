@@ -34,10 +34,6 @@
         </activity>
 
         <activity
-            android:name=".ProfileListActivity"
-            android:exported="false" />
-
-        <activity
             android:name=".ScanQrActivity"
             android:exported="false" />
 
