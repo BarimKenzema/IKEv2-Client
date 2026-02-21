@@ -54,7 +54,6 @@ jobs:
 
           make -j$(nproc) 2>&1 | tail -20 || echo "Host make done"
 
-          # Ensure generated files exist
           if [ ! -f src/libstrongswan/asn1/oid.c ]; then
             cd src/libstrongswan/asn1 && perl oid.pl oid.txt oid.c oid.h && cd ../../..
           fi
@@ -63,73 +62,60 @@ jobs:
             echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
           fi
 
-      - name: Patch strongSwan for clean build
+      - name: Analyze exact module dependencies
+        run: |
+          cd ss-full
+          echo "=== libstrongswan/Android.mk - ALL library deps ==="
+          grep -n "LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES\|LOCAL_MODULE\b" src/libstrongswan/Android.mk
+          echo ""
+          echo "=== libcharon/Android.mk - ALL library deps ==="
+          grep -n "LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES\|LOCAL_MODULE\b" src/libcharon/Android.mk
+          echo ""
+          echo "=== libipsec/Android.mk - ALL library deps ==="
+          grep -n "LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES\|LOCAL_MODULE\b" src/libipsec/Android.mk
+          echo ""
+          echo "=== libandroidbridge/Android.mk - ALL library deps ==="
+          grep -n "LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES\|LOCAL_MODULE\b" src/frontends/android/app/src/main/jni/libandroidbridge/Android.mk
+          echo ""
+          echo "=== Does libtls/Android.mk exist? ==="
+          ls -la src/libtls/Android.mk 2>/dev/null || echo "NO - libtls/Android.mk does NOT exist"
+          echo ""
+          echo "=== Full libstrongswan/Android.mk ==="
+          cat src/libstrongswan/Android.mk
+
+      - name: Patch Android.mk - disable BYOD, do NOT add libtls
         run: |
           cd ss-full
           JNI_MK="src/frontends/android/app/src/main/jni/Android.mk"
-          BUILD_GRADLE="src/frontends/android/app/build.gradle"
 
-          echo "=== 1. Disable BYOD ==="
+          echo "=== Disable BYOD ==="
           sed -i 's/^strongswan_USE_BYOD := true/strongswan_USE_BYOD :=/' "${JNI_MK}"
-          grep "strongswan_USE_BYOD" "${JNI_MK}"
 
-          echo ""
-          echo "=== 2. Add libtls to build list ==="
-          # libtls is needed by eap-tls plugin but not in default build list
-          # Insert it before libstrongswan
-          sed -i '/\$(strongswan_DIR)\/src\/libcharon/a\\t$(strongswan_DIR)/src/libtls \\' "${JNI_MK}"
+          echo "=== Remove eap-tls (needs libtls which has no Android.mk) ==="
+          sed -i 's/eap-tls//' "${JNI_MK}"
 
-          echo ""
-          echo "=== 3. Add libtls include path ==="
-          # The openssl_PATH line exists, add libtls_PATH after it
-          sed -i '/^openssl_PATH/a libtls_PATH := $(LOCAL_PATH)/$(strongswan_DIR)/src/libtls' "${JNI_MK}"
-
-          echo ""
-          echo "=== 4. Patch build.gradle - add APP_ALLOW_MISSING_DEPS ==="
-          sed -i "s|arguments '-j'|arguments 'APP_ALLOW_MISSING_DEPS=true', '-j'|" "${BUILD_GRADLE}"
-          grep "arguments" "${BUILD_GRADLE}"
-
-          echo ""
-          echo "=== 5. Verify Android.mk build list ==="
-          grep -A15 "strongswan_BUILD :=" "${JNI_MK}"
-
-          echo ""
-          echo "=== 6. Check libtls/Android.mk exists ==="
-          if [ -f "src/libtls/Android.mk" ]; then
-            echo "OK - libtls/Android.mk exists"
-            cat src/libtls/Android.mk
-          else
-            echo "MISSING - need to check"
-            find src/libtls -name "*.mk" -ls 2>/dev/null || echo "No .mk files in libtls"
-            ls src/libtls/ 2>/dev/null || echo "libtls dir doesn't exist"
-          fi
-
-          echo ""
-          echo "=== 7. Check ALL shared lib dependencies ==="
-          for mk in \
-            src/libstrongswan/Android.mk \
-            src/libcharon/Android.mk \
-            src/libipsec/Android.mk \
-            src/libtls/Android.mk \
-            src/frontends/android/app/src/main/jni/libandroidbridge/Android.mk; do
-            echo "--- ${mk} ---"
-            grep "LOCAL_SHARED_LIBRARIES\|LOCAL_STATIC_LIBRARIES\|LOCAL_MODULE " "${mk}" 2>/dev/null || echo "(not found)"
-            echo ""
-          done
-
-          echo ""
-          echo "=== 8. Also disable BYOD in Java ==="
+          echo "=== Also disable BYOD in Java ==="
           find src/frontends/android -name "*.java" -exec grep -l "USE_BYOD" {} \; | while read f; do
-            echo "Patching $f"
             sed -i 's/USE_BYOD = true/USE_BYOD = false/g' "$f"
           done
+
+          echo ""
+          echo "=== Final Android.mk (relevant sections) ==="
+          echo "--- Plugins ---"
+          grep -A3 "strongswan_CHARON_PLUGINS" "${JNI_MK}"
+          echo ""
+          echo "--- BYOD ---"
+          grep "strongswan_USE_BYOD" "${JNI_MK}"
+          echo ""
+          echo "--- Build list ---"
+          grep -A10 "strongswan_BUILD :=" "${JNI_MK}"
 
       - name: Download OpenSSL
         run: |
           curl -fL -o openssl.tar.gz "https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz"
           tar xzf openssl.tar.gz
 
-      - name: Build OpenSSL for Android
+      - name: Build OpenSSL for Android (shared + static)
         run: |
           set -e
           export ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}"
@@ -140,138 +126,4 @@ jobs:
             echo "===== Building OpenSSL for ${ABI} ====="
             local BUILD_DIR="${GITHUB_WORKSPACE}/openssl-build-${ABI}"
             local OUT_DIR="${GITHUB_WORKSPACE}/openssl-out-${ABI}"
-            rm -rf "${BUILD_DIR}" "${OUT_DIR}"
-            cp -r "openssl-${{ env.OPENSSL_VERSION }}" "${BUILD_DIR}"
-            cd "${BUILD_DIR}"
-            ./Configure "${TARGET}" \
-              -D__ANDROID_API__=21 \
-              --prefix="${OUT_DIR}" \
-              --openssldir="${OUT_DIR}" \
-              --libdir=lib \
-              no-tests no-ui-console
-            make -j$(nproc)
-            make install_sw
-            cd "${GITHUB_WORKSPACE}"
-          }
-
-          build_ssl arm64-v8a android-arm64
-          build_ssl armeabi-v7a android-arm
-          build_ssl x86 android-x86
-          build_ssl x86_64 android-x86_64
-
-      - name: Setup OpenSSL in JNI directory
-        run: |
-          set -e
-          OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
-          mkdir -p "${OSSL}/include"
-          cp -r "${GITHUB_WORKSPACE}/openssl-out-arm64-v8a/include/openssl" "${OSSL}/include/"
-
-          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
-            DEST="${OSSL}/${ABI}"
-            mkdir -p "${DEST}"
-            OUT="${GITHUB_WORKSPACE}/openssl-out-${ABI}/lib"
-            for LIB in libcrypto libssl; do
-              REAL=$(find "${OUT}" -name "${LIB}.so*" ! -type l 2>/dev/null | head -1)
-              if [ -n "${REAL}" ]; then
-                cp "${REAL}" "${DEST}/${LIB}.so"
-              else
-                cp -L "${OUT}/${LIB}.so" "${DEST}/${LIB}.so"
-              fi
-            done
-            echo "${ABI}: $(ls ${DEST}/)"
-          done
-
-      - name: Create openssl Android.mk
-        run: |
-          TARGET="ss-full/src/frontends/android/app/src/main/jni/openssl/Android.mk"
-          printf 'LOCAL_PATH := $(call my-dir)\n\n' > "${TARGET}"
-          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
-          printf 'LOCAL_MODULE := libcrypto\n' >> "${TARGET}"
-          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so\n' >> "${TARGET}"
-          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
-          printf 'include $(PREBUILT_SHARED_LIBRARY)\n\n' >> "${TARGET}"
-          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
-          printf 'LOCAL_MODULE := libssl\n' >> "${TARGET}"
-          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so\n' >> "${TARGET}"
-          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
-          printf 'include $(PREBUILT_SHARED_LIBRARY)\n' >> "${TARGET}"
-
-      - name: Test ndk-build before Gradle
-        run: |
-          cd ss-full/src/frontends/android/app/src/main/jni
-          echo "=== Running ndk-build dry run to find missing deps ==="
-          ${ANDROID_NDK_HOME}/ndk-build \
-            NDK_PROJECT_PATH=null \
-            APP_BUILD_SCRIPT=$(pwd)/Android.mk \
-            NDK_APPLICATION_MK=$(pwd)/Application.mk \
-            APP_ABI=arm64-v8a \
-            NDK_DEBUG=1 \
-            APP_PLATFORM=android-21 \
-            NDK_OUT=/tmp/ndk-out \
-            NDK_LIBS_OUT=/tmp/ndk-libs \
-            -n -B 2>&1 | tee /tmp/ndk-test.log || true
-
-          echo ""
-          echo "=== MISSING MODULE ERRORS ==="
-          grep -i "undefined modules\|depends on\|missing" /tmp/ndk-test.log || echo "No missing module errors found!"
-          echo ""
-          echo "=== ALL ERRORS ==="
-          grep -i "error\|Stop\.\|cannot\|undefined" /tmp/ndk-test.log | head -20 || echo "No errors found!"
-          echo ""
-          echo "=== Full error context (last 30 lines) ==="
-          tail -30 /tmp/ndk-test.log
-
-      - name: Build APK
-        run: |
-          cd ss-full/src/frontends/android
-          echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
-
-          set +e
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
-          RESULT=${PIPESTATUS[0]}
-          set -e
-
-          if [ ${RESULT} -ne 0 ]; then
-            echo ""
-            echo "##############################################"
-            echo "# BUILD FAILED"
-            echo "##############################################"
-
-            echo ""
-            echo "=== Undefined module errors ==="
-            grep -i "undefined modules\|depends on" "${GITHUB_WORKSPACE}/build.log" | head -10
-
-            echo ""
-            echo "=== All lines with 'error' (excluding Java exceptions) ==="
-            grep -in "error" "${GITHUB_WORKSPACE}/build.log" | grep -iv "Exception\|ProcessException\|Throwable\|TaskExecution\|IssueReporter\|error when building\|CXX1429\|EventFiring\|DefaultBuild\|OperationRunner\|ExecuteStep\|CancelExecution\|TimeoutStep\|SkipUpToDate\|CachingState\|CaptureOutputs\|ResolveInput\|BuildCache\|StoreExecution\|HandleStale\|AssignMutable\|ChoosePipeline\|IdentityCache\|IdentifyStep\|DefaultExecution\|ExecuteActions\|FinalizeProperties\|ResolveTask\|SkipTask\|SkipOnly\|CatchException\|GradleProcess\|ExecException\|build-binary.mk:603" | head -20
-
-            echo ""
-            echo "=== NDK build-binary.mk context ==="
-            grep -B5 "build-binary.mk:603" "${GITHUB_WORKSPACE}/build.log" | head -30
-
-            echo ""
-            echo "=== C compilation errors ==="
-            grep -E "\.c:[0-9]+:[0-9]+: error:" "${GITHUB_WORKSPACE}/build.log" | head -20
-
-            echo ""
-            echo "=== Linker errors ==="
-            grep "undefined reference\|cannot find -l" "${GITHUB_WORKSPACE}/build.log" | head -20
-
-            exit 1
-          fi
-
-      - name: Upload APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: strongswan-debug-apk
-          path: ss-full/src/frontends/android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build.log
-          if-no-files-found: warn
+            
