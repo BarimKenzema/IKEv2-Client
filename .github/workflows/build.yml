@@ -44,30 +44,66 @@ jobs:
           ./autogen.sh
           ./configure
 
-      - name: Verify Android prerequisites
+      - name: Fix Android.common.mk
         run: |
-          SS="ss-full"
-          echo "=== Required files ==="
-          for f in Android.common.mk src/libstrongswan/Android.mk src/libcharon/Android.mk src/libipsec/Android.mk src/libtnccs/Android.mk src/libtncif/Android.mk src/libimcv/Android.mk src/libtpmtss/Android.mk; do
-            if [ -f "${SS}/${f}" ]; then
+          cd ss-full
+
+          echo "=== Checking for Android.common.mk.in ==="
+          if [ -f "Android.common.mk.in" ]; then
+            echo "Template exists:"
+            cat Android.common.mk.in
+          else
+            echo "No template found"
+          fi
+
+          echo ""
+          echo "=== Checking for generated Android.common.mk ==="
+          if [ -f "Android.common.mk" ]; then
+            echo "Already exists:"
+            cat Android.common.mk
+          else
+            echo "Missing! Creating it manually..."
+
+            # Extract version from configure.ac
+            VERSION=$(grep 'AC_INIT' configure.ac | sed -n 's/.*\[\([0-9][0-9.]*\)\].*/\1/p')
+            if [ -z "$VERSION" ]; then
+              VERSION=$(grep 'PACKAGE_VERSION=' configure | sed -n "s/.*PACKAGE_VERSION='\([^']*\)'.*/\1/p")
+            fi
+            if [ -z "$VERSION" ]; then
+              VERSION="6.0.0"
+            fi
+
+            echo "Detected version: ${VERSION}"
+            echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
+            echo ""
+            echo "Created Android.common.mk:"
+            cat Android.common.mk
+          fi
+
+          echo ""
+          echo "=== Verify all required .mk files ==="
+          for f in \
+            Android.common.mk \
+            src/libstrongswan/Android.mk \
+            src/libcharon/Android.mk \
+            src/libipsec/Android.mk \
+            src/libtnccs/Android.mk \
+            src/libtncif/Android.mk \
+            src/libimcv/Android.mk \
+            src/libtpmtss/Android.mk; do
+            if [ -f "${f}" ]; then
               echo "OK   ${f}"
             else
               echo "MISS ${f}"
             fi
           done
-          echo ""
-          echo "=== Android.common.mk ==="
-          cat "${SS}/Android.common.mk"
-          echo ""
-          echo "=== libstrongswan deps ==="
-          grep -n "SHARED_LIBRARIES\|STATIC_LIBRARIES\|crypto\|ssl" "${SS}/src/libstrongswan/Android.mk" | head -20
 
       - name: Download OpenSSL
         run: |
           curl -fL -o openssl.tar.gz "https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz"
           tar xzf openssl.tar.gz
 
-      - name: Build OpenSSL shared libs for Android
+      - name: Build OpenSSL for Android
         run: |
           set -e
           export ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}"
@@ -75,8 +111,7 @@ jobs:
 
           build_ssl() {
             local ABI=$1 TARGET=$2
-            echo ""
-            echo "===== Building OpenSSL for ${ABI} (${TARGET}) ====="
+            echo "===== Building OpenSSL for ${ABI} ====="
             local BUILD_DIR="${GITHUB_WORKSPACE}/openssl-build-${ABI}"
             local OUT_DIR="${GITHUB_WORKSPACE}/openssl-out-${ABI}"
             rm -rf "${BUILD_DIR}" "${OUT_DIR}"
@@ -87,12 +122,11 @@ jobs:
               --prefix="${OUT_DIR}" \
               --openssldir="${OUT_DIR}" \
               --libdir=lib \
-              no-tests \
-              no-ui-console
+              no-tests no-ui-console
             make -j$(nproc)
             make install_sw
-            echo "Installed:"
-            find "${OUT_DIR}" \( -name "*.so*" -o -name "*.a" \) -ls
+            echo "Built:"
+            find "${OUT_DIR}/lib" \( -name "*.so*" -o -name "*.a" \) -ls
             cd "${GITHUB_WORKSPACE}"
           }
 
@@ -107,66 +141,63 @@ jobs:
           OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
           mkdir -p "${OSSL}/include"
 
+          # Copy headers
           cp -r "${GITHUB_WORKSPACE}/openssl-out-arm64-v8a/include/openssl" "${OSSL}/include/"
 
+          # Copy shared libs for each ABI
           for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
             DEST="${OSSL}/${ABI}"
             mkdir -p "${DEST}"
-            OUT="${GITHUB_WORKSPACE}/openssl-out-${ABI}"
+            OUT="${GITHUB_WORKSPACE}/openssl-out-${ABI}/lib"
 
             for LIB in libcrypto libssl; do
-              REAL=$(find "${OUT}/lib" -name "${LIB}.so*" ! -type l 2>/dev/null | head -1)
+              # Find the real .so file (not symlink)
+              REAL=$(find "${OUT}" -name "${LIB}.so*" ! -type l 2>/dev/null | head -1)
               if [ -n "${REAL}" ]; then
                 cp "${REAL}" "${DEST}/${LIB}.so"
               else
-                LINK=$(find "${OUT}/lib" -name "${LIB}.so" -type l 2>/dev/null | head -1)
-                if [ -n "${LINK}" ]; then
-                  cp -L "${LINK}" "${DEST}/${LIB}.so"
-                else
-                  echo "ERROR: ${LIB}.so not found for ${ABI}"
-                  find "${OUT}" -name "${LIB}*" -ls
-                  exit 1
-                fi
+                # Follow symlink
+                cp -L "${OUT}/${LIB}.so" "${DEST}/${LIB}.so"
               fi
             done
-            echo "${ABI}: $(ls -la ${DEST}/)"
+            echo "${ABI}: $(ls ${DEST}/)"
           done
 
-          echo ""
-          echo "=== Verify all .so files ==="
-          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
-            for LIB in libcrypto libssl; do
-              F="${OSSL}/${ABI}/${LIB}.so"
-              if [ -f "${F}" ]; then
-                echo "OK   ${F} ($(stat -c%s "${F}") bytes)"
-              else
-                echo "FAIL ${F} missing"
-                exit 1
-              fi
-            done
-          done
-
-      - name: Create openssl Android.mk
+      - name: Create openssl/Android.mk
         run: |
           OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
           cat > "${OSSL}/Android.mk" << 'ENDMK'
           LOCAL_PATH := $(call my-dir)
+
           include $(CLEAR_VARS)
           LOCAL_MODULE := libcrypto
           LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so
           LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
           include $(PREBUILT_SHARED_LIBRARY)
+
           include $(CLEAR_VARS)
           LOCAL_MODULE := libssl
           LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so
           LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
           include $(PREBUILT_SHARED_LIBRARY)
           ENDMK
+
           echo "=== openssl/Android.mk ==="
           cat "${OSSL}/Android.mk"
           echo ""
-          echo "=== Full openssl directory ==="
-          find "${OSSL}" -type f | sort
+          echo "=== Verify structure ==="
+          find "${OSSL}" -type f -name "*.so" -o -name "*.mk" | sort
+
+      - name: Inspect what libstrongswan expects from OpenSSL
+        run: |
+          echo "=== libstrongswan/Android.mk OpenSSL refs ==="
+          grep -n "crypto\|ssl\|openssl\|SHARED_LIB\|STATIC_LIB" ss-full/src/libstrongswan/Android.mk | head -30
+          echo ""
+          echo "=== libcharon/Android.mk OpenSSL refs ==="
+          grep -n "crypto\|ssl\|openssl\|SHARED_LIB\|STATIC_LIB" ss-full/src/libcharon/Android.mk | head -20
+          echo ""
+          echo "=== libandroidbridge/Android.mk ==="
+          grep -n "crypto\|ssl\|openssl\|SHARED_LIB\|STATIC_LIB" ss-full/src/frontends/android/app/src/main/jni/libandroidbridge/Android.mk | head -20
 
       - name: Build APK
         run: |
@@ -180,17 +211,14 @@ jobs:
           if [ ${RESULT} -ne 0 ]; then
             echo ""
             echo "============================================"
-            echo "BUILD FAILED - Error details:"
+            echo "BUILD FAILED - Extracting error details"
             echo "============================================"
             echo ""
             echo "--- NDK/Make errors ---"
-            grep -n "error:\|FAILED\|No such file\|Stop\.\|cannot find\|undefined reference\|fatal\|^make:" "${GITHUB_WORKSPACE}/build.log" | grep -iv "Xlint\|deprecation\|stacktrace\|--info\|--debug\|--scan\|help.gradle\|compilerArgs\|configureEach\|ProcessException\|ExecException" | head -40
+            grep -n "error:\|FAILED\|No such file\|Stop\.\|cannot find\|undefined reference\|fatal" "${GITHUB_WORKSPACE}/build.log" | grep -iv "stacktrace\|--info\|--debug\|--scan\|help.gradle\|compilerArgs\|ProcessException\|ExecException\|Xlint" | head -40
             echo ""
-            echo "--- Error context ---"
-            grep -n -B5 -A10 "error when building\|No such file\|^make:\|Stop\." "${GITHUB_WORKSPACE}/build.log" | head -150
-            echo ""
-            echo "--- Last 30 lines before FAILED ---"
-            grep -n -B30 "FAILED" "${GITHUB_WORKSPACE}/build.log" | head -60
+            echo "--- Context around first error ---"
+            grep -n -B5 -A10 "error when building\|No such file\|No rule to make\|cannot find\|undefined reference" "${GITHUB_WORKSPACE}/build.log" | head -80
             exit 1
           fi
 
@@ -208,3 +236,4 @@ jobs:
         with:
           name: build-log
           path: build.log
+          if-no-files-found: warn
