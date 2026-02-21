@@ -60,47 +60,6 @@ jobs:
             echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
           fi
 
-      - name: Patch strongSwan for build
-        run: |
-          cd ss-full
-          JNI_MK="src/frontends/android/app/src/main/jni/Android.mk"
-          SS_MK="src/libstrongswan/Android.mk"
-
-          echo "=== 1. Disable BYOD ==="
-          sed -i 's/^strongswan_USE_BYOD := true/strongswan_USE_BYOD :=/' "${JNI_MK}"
-
-          echo "=== 2. Remove eap-tls from plugins ==="
-          sed -i 's/ eap-tls//' "${JNI_MK}"
-
-          echo "=== 3. Disable BYOD in Java ==="
-          find src/frontends/android -name "*.java" -exec grep -l "USE_BYOD" {} \; | while read f; do
-            sed -i 's/USE_BYOD = true/USE_BYOD = false/g' "$f"
-          done
-
-          echo "=== 4. Patch libstrongswan to use shared OpenSSL ==="
-          echo "--- Before ---"
-          grep -n "crypto_static\|ssl_static\|LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES" "${SS_MK}"
-          echo ""
-
-          # Change crypto_static -> libcrypto in shared libs instead of static
-          sed -i 's/LOCAL_STATIC_LIBRARIES += crypto_static/LOCAL_SHARED_LIBRARIES += libcrypto/' "${SS_MK}"
-          sed -i 's/LOCAL_STATIC_LIBRARIES += ssl_static/LOCAL_SHARED_LIBRARIES += libssl/' "${SS_MK}"
-          # Also handle := form
-          sed -i 's/LOCAL_STATIC_LIBRARIES := crypto_static/LOCAL_SHARED_LIBRARIES += libcrypto/' "${SS_MK}"
-          sed -i 's/LOCAL_STATIC_LIBRARIES := ssl_static/LOCAL_SHARED_LIBRARIES += libssl/' "${SS_MK}"
-
-          echo "--- After ---"
-          grep -n "crypto\|ssl\|LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES" "${SS_MK}"
-
-          echo ""
-          echo "=== 5. Verify final state ==="
-          echo "--- Plugins ---"
-          grep "strongswan_CHARON_PLUGINS" "${JNI_MK}"
-          echo "--- BYOD ---"
-          grep "strongswan_USE_BYOD" "${JNI_MK}"
-          echo "--- Build list ---"
-          grep -A10 "strongswan_BUILD :=" "${JNI_MK}"
-
       - name: Download OpenSSL
         run: |
           curl -fL -o openssl.tar.gz "https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz"
@@ -136,7 +95,7 @@ jobs:
           build_ssl x86 android-x86
           build_ssl x86_64 android-x86_64
 
-      - name: Setup OpenSSL in JNI directory (shared libs only)
+      - name: Setup OpenSSL in JNI directory
         run: |
           set -e
           OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
@@ -148,6 +107,7 @@ jobs:
             mkdir -p "${DEST}"
             OUT="${GITHUB_WORKSPACE}/openssl-out-${ABI}/lib"
             for LIB in libcrypto libssl; do
+              # Copy the actual .so file (not symlinks)
               REAL=$(find "${OUT}" -name "${LIB}.so*" ! -type l 2>/dev/null | head -1)
               if [ -n "${REAL}" ]; then
                 cp "${REAL}" "${DEST}/${LIB}.so"
@@ -155,29 +115,206 @@ jobs:
                 cp -L "${OUT}/${LIB}.so" "${DEST}/${LIB}.so"
               fi
             done
-            echo "${ABI}: $(ls ${DEST}/)"
+            echo "${ABI}: $(ls -la ${DEST}/)"
           done
 
-      - name: Create openssl Android.mk (shared only)
+          echo ""
+          echo "=== Verify shared libs have symbols ==="
+          TOOLCHAIN="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          ${TOOLCHAIN}/llvm-nm --dynamic "${OSSL}/arm64-v8a/libcrypto.so" | grep -c "T " || true
+          echo "arm64 libcrypto.so exported symbols counted above"
+
+      - name: Create openssl Android.mk
         run: |
           TARGET="ss-full/src/frontends/android/app/src/main/jni/openssl/Android.mk"
-          printf 'LOCAL_PATH := $(call my-dir)\n\n' > "${TARGET}"
-          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
-          printf 'LOCAL_MODULE := libcrypto\n' >> "${TARGET}"
-          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so\n' >> "${TARGET}"
-          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
-          printf 'include $(PREBUILT_SHARED_LIBRARY)\n\n' >> "${TARGET}"
-          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
-          printf 'LOCAL_MODULE := libssl\n' >> "${TARGET}"
-          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so\n' >> "${TARGET}"
-          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
-          printf 'include $(PREBUILT_SHARED_LIBRARY)\n' >> "${TARGET}"
+          cat > "${TARGET}" << 'ENDOFMK'
+          LOCAL_PATH := $(call my-dir)
+
+          # ---- libcrypto (shared prebuilt) ----
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libcrypto
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+
+          # ---- backward-compat alias: crypto_static -> libcrypto ----
+          # Some strongSwan .mk files reference "crypto_static".
+          # We define it as a shared prebuilt pointing to the same .so
+          # so those references resolve without patching every file.
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := crypto_static
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+
+          # ---- libssl (shared prebuilt) ----
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libssl
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+
+          # ---- backward-compat alias: ssl_static -> libssl ----
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := ssl_static
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+          ENDOFMK
+
+          # Remove leading whitespace that heredoc indentation adds
+          sed -i 's/^          //' "${TARGET}"
+
           echo "=== openssl/Android.mk ==="
           cat "${TARGET}"
 
-      - name: Test ndk-build
+      - name: Patch strongSwan for build
+        run: |
+          cd ss-full
+          JNI_MK="src/frontends/android/app/src/main/jni/Android.mk"
+          JNI_DIR="src/frontends/android/app/src/main/jni"
+
+          echo "######################################"
+          echo "# PHASE 1: Disable BYOD"
+          echo "######################################"
+          sed -i 's/^strongswan_USE_BYOD := true/strongswan_USE_BYOD :=/' "${JNI_MK}"
+
+          echo ""
+          echo "######################################"
+          echo "# PHASE 2: Remove eap-tls from plugins"
+          echo "######################################"
+          sed -i 's/ eap-tls//' "${JNI_MK}"
+
+          echo ""
+          echo "######################################"
+          echo "# PHASE 3: Disable BYOD in Java"
+          echo "######################################"
+          find src/frontends/android -name "*.java" -exec grep -l "USE_BYOD" {} \; | while read f; do
+            sed -i 's/USE_BYOD = true/USE_BYOD = false/g' "$f"
+          done
+
+          echo ""
+          echo "######################################"
+          echo "# PHASE 4: Fix ALL .mk files to use"
+          echo "#           shared OpenSSL properly"
+          echo "######################################"
+
+          # Find every Android.mk under the JNI tree that references crypto_static or ssl_static
+          echo "--- Scanning all .mk files for crypto_static / ssl_static references ---"
+          find "${JNI_DIR}" -name "*.mk" -exec grep -l "crypto_static\|ssl_static" {} \; 2>/dev/null | while read mkfile; do
+            echo ""
+            echo "  Patching: ${mkfile}"
+            echo "  Before:"
+            grep -n "crypto_static\|ssl_static" "${mkfile}" || true
+
+            # Strategy: Move crypto_static/ssl_static from LOCAL_STATIC_LIBRARIES to
+            #           LOCAL_SHARED_LIBRARIES as libcrypto/libssl.
+            # But since we also define crypto_static as a PREBUILT_SHARED_LIBRARY alias,
+            # the safest approach is: change them in LOCAL_STATIC_LIBRARIES to the
+            # LOCAL_SHARED_LIBRARIES line. However, this is complex with sed because
+            # the variable might be on a continuation line.
+            #
+            # Simpler approach: Since we defined crypto_static as a shared prebuilt module,
+            # we just need to ensure that when it appears in LOCAL_STATIC_LIBRARIES,
+            # the NDK treats it correctly. The NDK will actually link it as shared
+            # because the module is defined via PREBUILT_SHARED_LIBRARY.
+            #
+            # BUT: NDK ndk-build may complain if a PREBUILT_SHARED_LIBRARY module
+            # is listed in LOCAL_STATIC_LIBRARIES. So let's move them.
+
+            # Move crypto_static from STATIC to SHARED libs
+            # Handle both += and := forms, and the reference might just be the name
+            sed -i '/LOCAL_STATIC_LIBRARIES.*crypto_static/{
+              s/crypto_static//
+            }' "${mkfile}"
+
+            sed -i '/LOCAL_STATIC_LIBRARIES.*ssl_static/{
+              s/ssl_static//
+            }' "${mkfile}"
+
+            # Now add them to LOCAL_SHARED_LIBRARIES
+            # We need to find where LOCAL_SHARED_LIBRARIES is set and add our libs.
+            # If LOCAL_SHARED_LIBRARIES doesn't exist for this module, we add it
+            # before the include $(BUILD_SHARED_LIBRARY) line.
+
+            # Check if this file already has LOCAL_SHARED_LIBRARIES with libcrypto
+            if ! grep -q "LOCAL_SHARED_LIBRARIES.*libcrypto" "${mkfile}"; then
+              # Insert before BUILD_SHARED_LIBRARY or BUILD_STATIC_LIBRARY
+              # Find the right spot - after the LOCAL_STATIC_LIBRARIES block
+              if grep -q "LOCAL_SHARED_LIBRARIES" "${mkfile}"; then
+                # Append to existing LOCAL_SHARED_LIBRARIES
+                sed -i '0,/LOCAL_SHARED_LIBRARIES/{s/LOCAL_SHARED_LIBRARIES\(.*\)/LOCAL_SHARED_LIBRARIES\1 crypto_static ssl_static/}' "${mkfile}"
+              else
+                # Add a new line before include $(BUILD_
+                sed -i '/include \$(BUILD_SHARED_LIBRARY)/i LOCAL_SHARED_LIBRARIES += crypto_static ssl_static' "${mkfile}"
+              fi
+            fi
+
+            echo "  After:"
+            grep -n "crypto_static\|ssl_static\|libcrypto\|libssl\|LOCAL_SHARED_LIBRARIES\|LOCAL_STATIC_LIBRARIES" "${mkfile}" || true
+          done
+
+          echo ""
+          echo "######################################"
+          echo "# PHASE 5: Verify critical files"
+          echo "######################################"
+          echo ""
+          echo "=== src/libstrongswan/Android.mk ==="
+          cat src/libstrongswan/Android.mk
+          echo ""
+          echo "=== Plugins in JNI Android.mk ==="
+          grep "strongswan_CHARON_PLUGINS" "${JNI_MK}"
+          echo ""
+          echo "=== BYOD ==="
+          grep "strongswan_USE_BYOD" "${JNI_MK}"
+
+      - name: Diagnostic - dump key files before build
+        run: |
+          cd ss-full
+          JNI_DIR="src/frontends/android/app/src/main/jni"
+
+          echo "============================================"
+          echo "=== ALL .mk files referencing openssl/crypto ==="
+          echo "============================================"
+          find "${JNI_DIR}" -name "*.mk" | while read f; do
+            if grep -qi "crypto\|openssl\|ssl" "$f" 2>/dev/null; then
+              echo ""
+              echo "--- ${f} ---"
+              grep -n -i "crypto\|openssl\|ssl\|STATIC_LIBRARIES\|SHARED_LIBRARIES" "$f" || true
+            fi
+          done
+
+          echo ""
+          echo "============================================"
+          echo "=== openssl/Android.mk ==="
+          echo "============================================"
+          cat "${JNI_DIR}/openssl/Android.mk"
+
+          echo ""
+          echo "============================================"
+          echo "=== Verify .so files exist ==="
+          echo "============================================"
+          find "${JNI_DIR}/openssl" -name "*.so" -exec ls -la {} \;
+
+          echo ""
+          echo "============================================"
+          echo "=== Check for symbol EVP_PKEY_free in libs ==="
+          echo "============================================"
+          TOOLCHAIN="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
+            SO="${JNI_DIR}/openssl/${ABI}/libcrypto.so"
+            if [ -f "${SO}" ]; then
+              COUNT=$(${TOOLCHAIN}/llvm-nm --dynamic "${SO}" 2>/dev/null | grep -c "T EVP_PKEY_free" || true)
+              echo "${ABI}: EVP_PKEY_free found ${COUNT} time(s)"
+            else
+              echo "${ABI}: libcrypto.so MISSING!"
+            fi
+          done
+
+      - name: Test ndk-build (dry run)
         run: |
           cd ss-full/src/frontends/android/app/src/main/jni
+          echo "=== Dry-run ndk-build for arm64-v8a ==="
           ${ANDROID_NDK_HOME}/ndk-build \
             NDK_PROJECT_PATH=null \
             APP_BUILD_SCRIPT=$(pwd)/Android.mk \
@@ -187,11 +324,13 @@ jobs:
             APP_PLATFORM=android-21 \
             NDK_OUT=/tmp/ndk-out \
             NDK_LIBS_OUT=/tmp/ndk-libs \
-            APP_ALLOW_MISSING_DEPS=true \
             -n -B 2>&1 | tee /tmp/ndk-test.log || true
           echo ""
           echo "=== ERRORS ==="
-          grep -i "undefined modules\|depends on\|No such file\|No rule to make\|Stop\." /tmp/ndk-test.log | head -20 || echo "No errors!"
+          grep -i "undefined modules\|depends on\|No such file\|No rule to make\|Stop\.\|cannot find" /tmp/ndk-test.log | head -20 || echo "No critical errors found"
+          echo ""
+          echo "=== LINK commands ==="
+          grep -i "\-lcrypto\|\-lssl\|libcrypto\|libssl" /tmp/ndk-test.log | head -10 || echo "No crypto link references found"
 
       - name: Build APK
         run: |
@@ -205,7 +344,7 @@ jobs:
           if [ ${RESULT} -ne 0 ]; then
             echo ""
             echo "##############################################"
-            echo "# BUILD FAILED"
+            echo "# BUILD FAILED - Diagnostics"
             echo "##############################################"
             echo ""
             echo "=== Undefined module errors ==="
@@ -214,11 +353,14 @@ jobs:
             echo "=== Missing files ==="
             grep -i "No such file\|No rule to make" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException" | head -10
             echo ""
-            echo "=== C/C++ errors ==="
+            echo "=== C/C++ compile errors ==="
             grep -E "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter\|TaskExecution\|EventFiring\|DefaultBuild" | head -20
             echo ""
             echo "=== Linker errors ==="
-            grep "undefined reference\|cannot find -l\|recompile with -fPIC" "${GITHUB_WORKSPACE}/build.log" | head -10
+            grep "undefined reference\|undefined symbol\|cannot find -l\|recompile with -fPIC" "${GITHUB_WORKSPACE}/build.log" | head -20
+            echo ""
+            echo "=== Full context around first error ==="
+            grep -n -B5 -A5 "undefined symbol\|undefined reference\|undefined modules" "${GITHUB_WORKSPACE}/build.log" | head -60
             exit 1
           fi
 
