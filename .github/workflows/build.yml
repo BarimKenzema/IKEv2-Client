@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y autoconf automake libtool pkg-config gettext python3 bison flex gperf perl curl unzip git
+          sudo apt-get install -y autoconf automake libtool pkg-config gettext python3 bison flex gperf perl curl unzip git libssl-dev
 
       - name: Set environment
         run: |
@@ -38,63 +38,91 @@ jobs:
       - name: Clone strongSwan
         run: git clone --depth 1 https://github.com/strongswan/strongswan.git ss-full
 
-      - name: Autogen and configure
+      - name: Generate strongSwan source files
         run: |
           cd ss-full
           ./autogen.sh
-          ./configure
+          ./configure --enable-openssl --enable-eap-identity --enable-eap-mschapv2 --enable-eap-tls --enable-eap-ttls --enable-eap-tnc
+          
+          echo "=== Running make to generate source files ==="
+          make -j$(nproc) || true
+          
+          echo ""
+          echo "=== Verify generated files ==="
+          for f in src/libstrongswan/asn1/oid.c src/libstrongswan/asn1/oid.h; do
+            if [ -f "$f" ]; then
+              echo "OK   $f ($(wc -l < $f) lines)"
+            else
+              echo "MISS $f - trying to generate manually"
+            fi
+          done
 
-      - name: Fix Android.common.mk
+      - name: Generate any remaining missing files
         run: |
           cd ss-full
 
-          echo "=== Checking for Android.common.mk.in ==="
-          if [ -f "Android.common.mk.in" ]; then
-            echo "Template exists:"
-            cat Android.common.mk.in
-          else
-            echo "No template found"
+          # Generate oid.c and oid.h if make didn't create them
+          if [ ! -f src/libstrongswan/asn1/oid.c ]; then
+            echo "Generating oid.c and oid.h manually..."
+            cd src/libstrongswan/asn1
+            if [ -f oid.pl ] && [ -f oid.txt ]; then
+              perl oid.pl oid.txt oid.c oid.h
+              echo "Generated oid.c ($(wc -l < oid.c) lines)"
+            else
+              echo "ERROR: oid.pl or oid.txt not found"
+              ls -la
+              exit 1
+            fi
+            cd ../../..
           fi
 
-          echo ""
-          echo "=== Checking for generated Android.common.mk ==="
-          if [ -f "Android.common.mk" ]; then
-            echo "Already exists:"
-            cat Android.common.mk
-          else
-            echo "Missing! Creating it manually..."
-
-            # Extract version from configure.ac
-            VERSION=$(grep 'AC_INIT' configure.ac | sed -n 's/.*\[\([0-9][0-9.]*\)\].*/\1/p')
-            if [ -z "$VERSION" ]; then
-              VERSION=$(grep 'PACKAGE_VERSION=' configure | sed -n "s/.*PACKAGE_VERSION='\([^']*\)'.*/\1/p")
+          # Verify Android.common.mk exists
+          if [ ! -f Android.common.mk ]; then
+            if [ -f Android.common.mk.in ]; then
+              echo "Generating Android.common.mk from template..."
+              sed "s/@PACKAGE_VERSION@/$(grep PACKAGE_VERSION= configure | head -1 | sed "s/.*='\(.*\)'/\1/")/g" Android.common.mk.in > Android.common.mk
+            else
+              VERSION=$(grep PACKAGE_VERSION= configure | head -1 | sed "s/.*='\(.*\)'/\1/")
+              echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
             fi
-            if [ -z "$VERSION" ]; then
-              VERSION="6.0.0"
-            fi
-
-            echo "Detected version: ${VERSION}"
-            echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
-            echo ""
             echo "Created Android.common.mk:"
             cat Android.common.mk
           fi
 
           echo ""
-          echo "=== Verify all required .mk files ==="
+          echo "=== List all generated .c files that Android.mk references ==="
+          # Check for other potentially generated files
+          ANDROID_MK="src/frontends/android/app/src/main/jni/Android.mk"
+          
+          # Find all .mk files that list source files
+          echo "Checking libstrongswan sources..."
+          grep "\.c" src/libstrongswan/Android.mk | head -30
+          
+          echo ""
+          echo "=== Verify all critical generated files ==="
           for f in \
-            Android.common.mk \
-            src/libstrongswan/Android.mk \
-            src/libcharon/Android.mk \
-            src/libipsec/Android.mk \
-            src/libtnccs/Android.mk \
-            src/libtncif/Android.mk \
-            src/libimcv/Android.mk \
-            src/libtpmtss/Android.mk; do
-            if [ -f "${f}" ]; then
-              echo "OK   ${f}"
+            src/libstrongswan/asn1/oid.c \
+            src/libstrongswan/asn1/oid.h \
+            src/libstrongswan/plugins/openssl/openssl_plugin.c \
+            src/libstrongswan/plugins/pkcs1/pkcs1_plugin.c \
+            src/libstrongswan/plugins/pem/pem_plugin.c \
+            src/libstrongswan/plugins/x509/x509_plugin.c \
+            src/libstrongswan/plugins/xcbc/xcbc_plugin.c \
+            src/libstrongswan/plugins/nonce/nonce_plugin.c \
+            src/libstrongswan/plugins/kdf/kdf_plugin.c \
+            src/libstrongswan/plugins/revocation/revocation_plugin.c \
+            src/libcharon/plugins/eap_identity/eap_identity_plugin.c \
+            src/libcharon/plugins/eap_mschapv2/eap_mschapv2_plugin.c \
+            src/libcharon/plugins/eap_tls/eap_tls_plugin.c \
+            src/libcharon/plugins/eap_ttls/eap_ttls_plugin.c \
+            src/libcharon/plugins/eap_md5/eap_md5_plugin.c \
+            src/libcharon/plugins/eap_gtc/eap_gtc_plugin.c \
+            src/libcharon/plugins/eap_tnc/eap_tnc_plugin.c \
+            Android.common.mk; do
+            if [ -f "$f" ]; then
+              echo "OK   $f"
             else
-              echo "MISS ${f}"
+              echo "MISS $f"
             fi
           done
 
@@ -140,23 +168,17 @@ jobs:
           set -e
           OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
           mkdir -p "${OSSL}/include"
-
-          # Copy headers
           cp -r "${GITHUB_WORKSPACE}/openssl-out-arm64-v8a/include/openssl" "${OSSL}/include/"
 
-          # Copy shared libs for each ABI
           for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
             DEST="${OSSL}/${ABI}"
             mkdir -p "${DEST}"
             OUT="${GITHUB_WORKSPACE}/openssl-out-${ABI}/lib"
-
             for LIB in libcrypto libssl; do
-              # Find the real .so file (not symlink)
               REAL=$(find "${OUT}" -name "${LIB}.so*" ! -type l 2>/dev/null | head -1)
               if [ -n "${REAL}" ]; then
                 cp "${REAL}" "${DEST}/${LIB}.so"
               else
-                # Follow symlink
                 cp -L "${OUT}/${LIB}.so" "${DEST}/${LIB}.so"
               fi
             done
@@ -184,20 +206,34 @@ jobs:
 
           echo "=== openssl/Android.mk ==="
           cat "${OSSL}/Android.mk"
-          echo ""
-          echo "=== Verify structure ==="
-          find "${OSSL}" -type f -name "*.so" -o -name "*.mk" | sort
 
-      - name: Inspect what libstrongswan expects from OpenSSL
+      - name: Final verification
         run: |
-          echo "=== libstrongswan/Android.mk OpenSSL refs ==="
-          grep -n "crypto\|ssl\|openssl\|SHARED_LIB\|STATIC_LIB" ss-full/src/libstrongswan/Android.mk | head -30
+          cd ss-full
+          echo "=== Critical files check ==="
+          FAIL=0
+          for f in \
+            Android.common.mk \
+            src/libstrongswan/asn1/oid.c \
+            src/libstrongswan/asn1/oid.h \
+            src/frontends/android/app/src/main/jni/openssl/Android.mk \
+            src/frontends/android/app/src/main/jni/Android.mk; do
+            if [ -f "$f" ]; then
+              echo "OK   $f"
+            else
+              echo "FAIL $f"
+              FAIL=1
+            fi
+          done
+
           echo ""
-          echo "=== libcharon/Android.mk OpenSSL refs ==="
-          grep -n "crypto\|ssl\|openssl\|SHARED_LIB\|STATIC_LIB" ss-full/src/libcharon/Android.mk | head -20
-          echo ""
-          echo "=== libandroidbridge/Android.mk ==="
-          grep -n "crypto\|ssl\|openssl\|SHARED_LIB\|STATIC_LIB" ss-full/src/frontends/android/app/src/main/jni/libandroidbridge/Android.mk | head -20
+          echo "=== OpenSSL .so files ==="
+          find src/frontends/android/app/src/main/jni/openssl -name "*.so" -ls
+
+          if [ $FAIL -eq 1 ]; then
+            echo "ERROR: Missing critical files!"
+            exit 1
+          fi
 
       - name: Build APK
         run: |
@@ -211,14 +247,9 @@ jobs:
           if [ ${RESULT} -ne 0 ]; then
             echo ""
             echo "============================================"
-            echo "BUILD FAILED - Extracting error details"
+            echo "BUILD FAILED - Error details:"
             echo "============================================"
-            echo ""
-            echo "--- NDK/Make errors ---"
-            grep -n "error:\|FAILED\|No such file\|Stop\.\|cannot find\|undefined reference\|fatal" "${GITHUB_WORKSPACE}/build.log" | grep -iv "stacktrace\|--info\|--debug\|--scan\|help.gradle\|compilerArgs\|ProcessException\|ExecException\|Xlint" | head -40
-            echo ""
-            echo "--- Context around first error ---"
-            grep -n -B5 -A10 "error when building\|No such file\|No rule to make\|cannot find\|undefined reference" "${GITHUB_WORKSPACE}/build.log" | head -80
+            grep -n "No rule to make\|No such file\|error:\|undefined reference\|cannot find\|Stop\." "${GITHUB_WORKSPACE}/build.log" | grep -iv "ProcessException\|ExecException\|stacktrace\|--info\|help.gradle" | head -30
             exit 1
           fi
 
