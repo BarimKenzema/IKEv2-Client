@@ -182,48 +182,82 @@ jobs:
             fi
           done
 
-      - name: Rebrand as AsadVPN (applicationId only - no Java rename)
+      - name: Rebrand as AsadVPN (applicationId only)
         run: |
           cd ss-full/src/frontends/android
-
-          echo "============================================"
-          echo "=== Rebranding to ${CUSTOM_APP_NAME}"
-          echo "=== applicationId: ${CUSTOM_APP_ID}"
-          echo "=== Java namespace stays: org.strongswan.android"
-          echo "============================================"
-
-          echo ""
-          echo "--- 1. Change applicationId in build.gradle ---"
-          # Only change applicationId, NOT namespace
           sed -i "s|applicationId \"org.strongswan.android\"|applicationId \"${CUSTOM_APP_ID}\"|g" app/build.gradle
-          echo "applicationId changed:"
-          grep "applicationId" app/build.gradle
-
-          echo ""
-          echo "--- 2. Change app name in strings.xml ---"
           find . -name "strings.xml" | while read str; do
-            # Change the app_name string value
             sed -i "s|<string name=\"app_name\">strongSwan VPN Client</string>|<string name=\"app_name\">${CUSTOM_APP_NAME}</string>|g" "${str}"
           done
-          echo "App name changed:"
-          grep "app_name" app/src/main/res/values/strings.xml || true
+          echo "applicationId: $(grep applicationId app/build.gradle)"
+          echo "namespace: $(grep namespace app/build.gradle)"
 
-          echo ""
-          echo "--- 3. Verify namespace is UNTOUCHED ---"
-          grep "namespace" app/build.gradle
-          echo "(Should still say org.strongswan.android)"
-
-      - name: Create AsadVPN custom files
+      - name: Discover strongSwan Java API
         run: |
           cd ss-full/src/frontends/android
-          # All custom code goes in org.strongswan.android package (same as the app)
+          BASE="app/src/main/java/org/strongswan/android"
+
+          echo "============================================"
+          echo "=== strongSwan Java API Discovery ==="
+          echo "============================================"
+
+          echo ""
+          echo "--- 1. VpnProfileDataSource type ---"
+          grep -E "^public" "${BASE}/data/VpnProfileDataSource.java" | head -3
+
+          echo ""
+          echo "--- 2. All DataSource files ---"
+          find "${BASE}/data" -name "*DataSource*" -exec echo "  {}" \;
+
+          echo ""
+          echo "--- 3. Concrete implementations ---"
+          grep -rl "implements VpnProfileDataSource\|extends VpnProfileDataSource" "${BASE}/data/" --include="*.java" 2>/dev/null | while read f; do
+            echo "  $(basename $f): $(grep 'class ' $f | head -1)"
+          done
+
+          echo ""
+          echo "--- 4. VpnProfileDataSource constructors (if concrete) ---"
+          grep "public VpnProfileDataSource\|public VpnProfileSqlDataSource" "${BASE}/data/"*.java 2>/dev/null | head -5
+
+          echo ""
+          echo "--- 5. CharonVpnService public constants ---"
+          grep "public static.*final.*String" "${BASE}/logic/CharonVpnService.java" 2>/dev/null | head -10
+
+          echo ""
+          echo "--- 6. VpnProfileControlActivity public constants ---"
+          grep "public static.*final.*String" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -10
+
+          echo ""
+          echo "--- 7. VpnStateService connect/disconnect methods ---"
+          grep -E "public.*void.*(connect|disconnect)\b" "${BASE}/logic/VpnStateService.java" 2>/dev/null | head -5
+
+          echo ""
+          echo "--- 8. VpnProfile setPassword / setGateway / setVpnType ---"
+          grep -E "public void set(Password|Gateway|VpnType|Username|Name)" "${BASE}/data/VpnProfile.java" 2>/dev/null | head -10
+
+          echo ""
+          echo "--- 9. VpnProfile getUUID ---"
+          grep -E "public.*getUUID|public.*getUuid|public.*getId" "${BASE}/data/VpnProfile.java" 2>/dev/null | head -5
+
+          echo ""
+          echo "--- 10. VpnType enum values ---"
+          grep "IKEV2" "${BASE}/data/VpnType.java" 2>/dev/null | head -5
+
+          echo ""
+          echo "--- 11. How VpnProfileControlActivity starts connection ---"
+          grep -B2 -A8 "startService\|\.connect\|onVpnProfileSelected\|startVpn\|profileInfo" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -40
+
+          echo ""
+          echo "--- 12. VpnProfileDataSource interface methods ---"
+          grep "public\|VpnProfile\|insert\|open\|close\|get" "${BASE}/data/VpnProfileDataSource.java" 2>/dev/null | head -20
+
+      - name: Create AsadVPN logic classes
+        run: |
+          cd ss-full/src/frontends/android
           JAVA_DIR="app/src/main/java/org/strongswan/android"
-          RES_DIR="app/src/main/res"
 
-          echo "=== Creating AsadVPN logic classes ==="
-
-          # --- ProfileCrypto.java ---
           mkdir -p "${JAVA_DIR}/logic"
+
           cat > "${JAVA_DIR}/logic/ProfileCrypto.java" << 'JAVA_EOF'
           package org.strongswan.android.logic;
 
@@ -318,7 +352,6 @@ jobs:
           }
           JAVA_EOF
 
-          # --- ProfileManager.java ---
           cat > "${JAVA_DIR}/logic/ProfileManager.java" << 'JAVA_EOF'
           package org.strongswan.android.logic;
 
@@ -383,7 +416,6 @@ jobs:
               public void checkForUpdates(UpdateCallback callback) {
                   ProfileCrypto.ProfileData data = getActiveProfile();
                   if (data == null || data.updateUrl == null || data.updateUrl.isEmpty()) return;
-
                   long lastUpdate = prefs.getLong(KEY_LAST_UPDATE, 0);
                   if (System.currentTimeMillis() - lastUpdate < UPDATE_INTERVAL) return;
 
@@ -409,7 +441,6 @@ jobs:
                               .putString(KEY_PROFILE, dataToJson(newData))
                               .putLong(KEY_LAST_UPDATE, System.currentTimeMillis())
                               .apply();
-
                           Log.i(TAG, "Server list updated: " + newData.servers.length + " servers");
                           if (callback != null) callback.onUpdated(newData);
                       } catch (Exception e) {
@@ -448,7 +479,6 @@ jobs:
           }
           JAVA_EOF
 
-          # --- FastServerSelector.java ---
           cat > "${JAVA_DIR}/logic/FastServerSelector.java" << 'JAVA_EOF'
           package org.strongswan.android.logic;
 
@@ -456,7 +486,6 @@ jobs:
           import java.net.InetAddress;
           import java.util.ArrayList;
           import java.util.List;
-          import java.util.concurrent.Callable;
           import java.util.concurrent.ExecutorService;
           import java.util.concurrent.Executors;
           import java.util.concurrent.Future;
@@ -475,7 +504,6 @@ jobs:
 
               public static ServerResult findFastest(String[] servers, String[] names) {
                   if (servers == null || servers.length == 0) return null;
-
                   if (servers.length == 1) {
                       ServerResult r = new ServerResult();
                       r.address = servers[0];
@@ -489,7 +517,6 @@ jobs:
                   List<Future<ServerResult>> futures = new ArrayList<>();
 
                   for (int i = 0; i < testCount; i++) {
-                      final int idx = i;
                       final String addr = servers[i];
                       final String name = names[i];
                       futures.add(executor.submit(() -> {
@@ -531,9 +558,6 @@ jobs:
                       best.address = servers[0];
                       best.name = names[0];
                       best.latencyMs = -1;
-                      Log.w(TAG, "All pings failed, using first server: " + best.address);
-                  } else {
-                      Log.i(TAG, "Fastest server: " + best.address + " (" + best.latencyMs + "ms)");
                   }
                   return best;
               }
@@ -541,14 +565,12 @@ jobs:
           JAVA_EOF
 
           echo "=== Logic classes created ==="
-          ls -la "${JAVA_DIR}/logic/ProfileCrypto.java" "${JAVA_DIR}/logic/ProfileManager.java" "${JAVA_DIR}/logic/FastServerSelector.java"
 
       - name: Create AsadVPN UI resources
         run: |
           cd ss-full/src/frontends/android
           RES_DIR="app/src/main/res"
 
-          # --- activity_asadvpn_main.xml ---
           cat > "${RES_DIR}/layout/activity_asadvpn_main.xml" << 'XML_EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -631,7 +653,6 @@ jobs:
           </LinearLayout>
           XML_EOF
 
-          # --- dialog_import_profile.xml ---
           cat > "${RES_DIR}/layout/dialog_import_profile.xml" << 'XML_EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -639,14 +660,12 @@ jobs:
               android:layout_height="wrap_content"
               android:orientation="vertical"
               android:padding="24dp">
-
               <TextView
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content"
                   android:text="Paste your encrypted profile code below:"
                   android:textSize="14sp"
                   android:layout_marginBottom="12dp" />
-
               <EditText
                   android:id="@+id/profile_input"
                   android:layout_width="match_parent"
@@ -659,7 +678,6 @@ jobs:
           </LinearLayout>
           XML_EOF
 
-          # --- circle_button_connect.xml ---
           mkdir -p "${RES_DIR}/drawable"
           cat > "${RES_DIR}/drawable/circle_button_connect.xml" << 'XML_EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -679,7 +697,6 @@ jobs:
           </selector>
           XML_EOF
 
-          # --- circle_button_disconnect.xml ---
           cat > "${RES_DIR}/drawable/circle_button_disconnect.xml" << 'XML_EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <selector xmlns:android="http://schemas.android.com/apk/res/android">
@@ -700,13 +717,88 @@ jobs:
 
           echo "=== UI resources created ==="
 
-      - name: Create AsadVPN Main Activity
+      - name: Create AsadVPN Main Activity (API-aware)
         run: |
           cd ss-full/src/frontends/android
-          JAVA_DIR="app/src/main/java/org/strongswan/android"
+          BASE="app/src/main/java/org/strongswan/android"
+          ACTIVITY="${BASE}/ui/AsadMainActivity.java"
 
-          cat > "${JAVA_DIR}/ui/AsadMainActivity.java" << 'JAVA_EOF'
-          package org.strongswan.android.ui;
+          echo "=== Discovering API for Activity generation ==="
+
+          # 1. Find concrete VpnProfileDataSource class
+          DS_CLASS=""
+          DS_IMPORT=""
+          if [ -f "${BASE}/data/VpnProfileSqlDataSource.java" ]; then
+            DS_CLASS="VpnProfileSqlDataSource"
+            DS_IMPORT="import org.strongswan.android.data.VpnProfileSqlDataSource;"
+          else
+            IMPL=$(grep -rl "implements VpnProfileDataSource\|extends VpnProfileDataSource" "${BASE}/data/" --include="*.java" 2>/dev/null | head -1)
+            if [ -n "${IMPL}" ]; then
+              DS_CLASS=$(grep -oP 'class \K\w+' "${IMPL}" | head -1)
+              DS_PKG=$(grep -oP 'package \K[\w.]+' "${IMPL}")
+              DS_IMPORT="import ${DS_PKG}.${DS_CLASS};"
+            fi
+          fi
+
+          # Fallback: check if VpnProfileDataSource itself is concrete
+          if [ -z "${DS_CLASS}" ]; then
+            if grep -q "^public class VpnProfileDataSource" "${BASE}/data/VpnProfileDataSource.java" 2>/dev/null; then
+              DS_CLASS="VpnProfileDataSource"
+              DS_IMPORT="import org.strongswan.android.data.VpnProfileDataSource;"
+            else
+              DS_CLASS="VpnProfileSqlDataSource"
+              DS_IMPORT="import org.strongswan.android.data.VpnProfileSqlDataSource;"
+            fi
+          fi
+          echo "DataSource class: ${DS_CLASS}"
+
+          # 2. Find profile UUID extra constant
+          UUID_EXTRA_CODE=""
+          if grep -q "EXTRA_VPN_PROFILE_UUID" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null; then
+            UUID_EXTRA_CODE='VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID'
+          elif grep -q "EXTRA_VPN_PROFILE_ID" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null; then
+            UUID_EXTRA_CODE='VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID'
+          else
+            UUID_EXTRA_CODE='"org.strongswan.android.VPN_PROFILE_UUID"'
+          fi
+          echo "UUID extra: ${UUID_EXTRA_CODE}"
+
+          # 3. Check if START_PROFILE action exists
+          START_ACTION=""
+          if grep -q "START_PROFILE" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null; then
+            START_ACTION='intent.setAction(VpnProfileControlActivity.START_PROFILE);'
+          fi
+          echo "Start action: ${START_ACTION:-none}"
+
+          # 4. Check if DataSource has open/close methods
+          HAS_OPEN="false"
+          if grep -q "void open\b" "${BASE}/data/VpnProfileDataSource.java" 2>/dev/null || \
+             grep -q "void open\b" "${BASE}/data/${DS_CLASS}.java" 2>/dev/null; then
+            HAS_OPEN="true"
+          fi
+          echo "Has open/close: ${HAS_OPEN}"
+
+          # 5. Check VpnProfile UUID getter name
+          UUID_GETTER="getUUID()"
+          if grep -q "getUuid()" "${BASE}/data/VpnProfile.java" 2>/dev/null; then
+            UUID_GETTER="getUuid()"
+          fi
+          echo "UUID getter: ${UUID_GETTER}"
+
+          # Now generate the Activity using Python to avoid shell escaping hell
+          python3 << PYEOF
+          ds_class = "${DS_CLASS}"
+          ds_import = "${DS_IMPORT}"
+          uuid_extra = '${UUID_EXTRA_CODE}'
+          start_action = '${START_ACTION}'
+          has_open = "${HAS_OPEN}" == "true"
+          uuid_getter = "${UUID_GETTER}"
+
+          open_code = "dataSource.open();" if has_open else ""
+          close_code = "dataSource.close();" if has_open else ""
+          action_code = "            " + start_action if start_action else ""
+
+          activity = '''package org.strongswan.android.ui;
 
           import android.app.Activity;
           import android.app.AlertDialog;
@@ -729,6 +821,7 @@ jobs:
           import org.strongswan.android.data.VpnProfile;
           import org.strongswan.android.data.VpnProfileDataSource;
           import org.strongswan.android.data.VpnType;
+          import ''' + ds_import.replace("import ", "").replace(";", "") + ''';
           import org.strongswan.android.logic.CharonVpnService;
           import org.strongswan.android.logic.FastServerSelector;
           import org.strongswan.android.logic.ProfileCrypto;
@@ -809,8 +902,8 @@ jobs:
                   super.onDestroy();
                   if (mService != null) {
                       mService.unregisterListener(this);
-                      unbindService(mServiceConnection);
                   }
+                  unbindService(mServiceConnection);
               }
 
               @Override
@@ -831,7 +924,7 @@ jobs:
                       statusText.setText("No Profile");
                       daysText.setText("Import a profile to get started");
                       serverText.setText("");
-                      connectButton.setText("NO\nPROFILE");
+                      connectButton.setText("NO\\nPROFILE");
                       connectButton.setEnabled(false);
                       connectButton.setBackgroundResource(R.drawable.circle_button_connect);
                       return;
@@ -851,7 +944,6 @@ jobs:
                   int days = activeProfile.remainingDays();
                   daysText.setText(days + " day" + (days != 1 ? "s" : "") + " remaining");
 
-                  // Check VPN state from service
                   State state = (mService != null) ? mService.getState() : State.DISABLED;
 
                   switch (state) {
@@ -910,15 +1002,15 @@ jobs:
                       if (fastest == null) {
                           runOnUiThread(() -> {
                               refreshUI();
-                              Toast.makeText(this, "No servers available", Toast.LENGTH_SHORT).show();
+                              Toast.makeText(AsadMainActivity.this, "No servers available", Toast.LENGTH_SHORT).show();
                           });
                           return;
                       }
 
                       runOnUiThread(() -> {
-                          serverText.setText("→ " + fastest.name);
+                          serverText.setText("\\u2192 " + fastest.name);
                           pendingServer = fastest.address;
-                          Intent intent = VpnService.prepare(this);
+                          Intent intent = VpnService.prepare(AsadMainActivity.this);
                           if (intent != null) {
                               startActivityForResult(intent, VPN_REQUEST_CODE);
                           } else {
@@ -947,8 +1039,8 @@ jobs:
 
               private void launchVpn(String serverAddress) {
                   try {
-                      VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
-                      dataSource.open();
+                      ''' + ds_class + ''' dataSource = new ''' + ds_class + '''(this);
+                      ''' + open_code + '''
 
                       VpnProfile profile = new VpnProfile();
                       profile.setName("AsadVPN - " + serverAddress);
@@ -958,11 +1050,12 @@ jobs:
                       profile.setVpnType(VpnType.IKEV2_EAP);
 
                       VpnProfile saved = dataSource.insertProfile(profile);
-                      dataSource.close();
+                      ''' + close_code + '''
 
-                      Intent intent = new Intent(this, CharonVpnService.class);
-                      intent.putExtra(CharonVpnService.PROFILE_UUID, saved.getUUID().toString());
-                      startService(intent);
+                      Intent intent = new Intent(this, VpnProfileControlActivity.class);
+          ''' + action_code + '''
+                      intent.putExtra(''' + uuid_extra + ''', saved.''' + uuid_getter + '''.toString());
+                      startActivity(intent);
 
                   } catch (Exception e) {
                       Log.e(TAG, "Failed to start VPN", e);
@@ -976,7 +1069,6 @@ jobs:
                   if (mService != null) {
                       mService.disconnect();
                   }
-                  refreshUI();
               }
 
               private void showImportDialog() {
@@ -1033,7 +1125,7 @@ jobs:
               private void showExpiredDialog() {
                   new AlertDialog.Builder(this)
                       .setTitle("Subscription Expired")
-                      .setMessage("Your VPN subscription has expired.\n\n" +
+                      .setMessage("Your VPN subscription has expired.\\n\\n" +
                           "To renew your subscription, please contact support.")
                       .setPositiveButton("Contact Support", (dialog, which) -> {
                           startActivity(new Intent(Intent.ACTION_VIEW,
@@ -1044,29 +1136,34 @@ jobs:
                       .show();
               }
           }
-          JAVA_EOF
+          '''
 
-          echo "=== AsadMainActivity.java created ==="
+          with open("${ACTIVITY}", "w") as f:
+              f.write(activity)
+
+          print("AsadMainActivity.java generated successfully")
+          print(f"  DataSource: {ds_class}")
+          print(f"  UUID extra: {uuid_extra}")
+          print(f"  Has open/close: {has_open}")
+          PYEOF
+
+          echo ""
+          echo "=== Verify generated Activity ==="
+          grep -n "DataSource\|EXTRA_VPN\|launchVpn\|import.*Sql\|import.*Control" "${ACTIVITY}" | head -15
 
       - name: Patch AndroidManifest for AsadVPN launcher
         run: |
           cd ss-full/src/frontends/android
-          MANIFEST="app/src/main/AndroidManifest.xml"
 
           python3 << 'PYEOF'
-          import re
-
           with open("app/src/main/AndroidManifest.xml", "r") as f:
               content = f.read()
 
-          # Remove LAUNCHER category from ALL existing activities
-          # This makes the original MainActivity no longer the launcher
           content = content.replace(
               '<category android:name="android.intent.category.LAUNCHER" />',
               '<!-- launcher moved to AsadMainActivity -->'
           )
 
-          # Add our AsadMainActivity before </application>
           asad_activity = '''
                   <activity
                       android:name="org.strongswan.android.ui.AsadMainActivity"
@@ -1083,56 +1180,21 @@ jobs:
 
           with open("app/src/main/AndroidManifest.xml", "w") as f:
               f.write(content)
-
-          print("AndroidManifest.xml patched for AsadVPN")
+          print("AndroidManifest.xml patched")
           PYEOF
-
-          echo ""
-          echo "=== Verifying manifest ==="
-          grep -n "LAUNCHER\|AsadMain\|MainActivity\|applicationId\|package=" "${MANIFEST}" | head -20
 
       - name: Pre-build verification
         run: |
           cd ss-full/src/frontends/android
-          echo "============================================"
-          echo "=== FINAL VERIFICATION BEFORE BUILD ==="
-          echo "============================================"
-
-          echo ""
           echo "--- applicationId ---"
           grep "applicationId" app/build.gradle
-
-          echo ""
           echo "--- namespace ---"
           grep "namespace" app/build.gradle
-
-          echo ""
-          echo "--- app_name ---"
-          grep "app_name" app/src/main/res/values/strings.xml | head -3
-
-          echo ""
-          echo "--- Launcher activity ---"
-          grep -A3 "LAUNCHER" app/src/main/AndroidManifest.xml
-
-          echo ""
-          echo "--- Custom Java files ---"
-          ls -la app/src/main/java/org/strongswan/android/logic/ProfileCrypto.java
-          ls -la app/src/main/java/org/strongswan/android/logic/ProfileManager.java
-          ls -la app/src/main/java/org/strongswan/android/logic/FastServerSelector.java
-          ls -la app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
-
-          echo ""
-          echo "--- Custom layouts ---"
-          ls -la app/src/main/res/layout/activity_asadvpn_main.xml
-          ls -la app/src/main/res/layout/dialog_import_profile.xml
-          ls -la app/src/main/res/drawable/circle_button_connect.xml
-          ls -la app/src/main/res/drawable/circle_button_disconnect.xml
-
-          echo ""
-          echo "--- Check no broken R imports ---"
-          echo "All Java files importing R:"
-          grep -r "import.*\.R;" app/src/main/java/ --include="*.java" | sort -u | head -20
-          echo "(All should say org.strongswan.android.R)"
+          echo "--- AsadMainActivity key lines ---"
+          grep -n "DataSource\|EXTRA_VPN\|PROFILE_UUID\|launchVpn\|import.*Data" \
+            app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java | head -15
+          echo "--- Launcher in manifest ---"
+          grep -B1 -A1 "LAUNCHER" app/src/main/AndroidManifest.xml
 
       - name: Test ndk-build (dry run)
         run: |
@@ -1147,9 +1209,7 @@ jobs:
             NDK_OUT=/tmp/ndk-out \
             NDK_LIBS_OUT=/tmp/ndk-libs \
             -n -B 2>&1 | tee /tmp/ndk-test.log || true
-          echo ""
-          echo "=== ERRORS ==="
-          grep -i "undefined modules\|depends on\|No such file\|No rule to make\|Stop\." /tmp/ndk-test.log | head -20 || echo "No critical errors"
+          grep -i "undefined modules\|Stop\." /tmp/ndk-test.log | head -10 || echo "No critical errors"
 
       - name: Build APK
         run: |
@@ -1170,10 +1230,7 @@ jobs:
             grep -E "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter\|TaskExecution\|EventFiring\|DefaultBuild" | head -30
             echo ""
             echo "=== Cannot find symbol ==="
-            grep -B1 "cannot find symbol" "${GITHUB_WORKSPACE}/build.log" | head -20
-            echo ""
-            echo "=== Package errors ==="
-            grep "package.*does not exist" "${GITHUB_WORKSPACE}/build.log" | head -20
+            grep -B2 "cannot find symbol\|is abstract" "${GITHUB_WORKSPACE}/build.log" | head -20
             exit 1
           fi
 
