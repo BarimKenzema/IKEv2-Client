@@ -1,0 +1,1194 @@
+name: Build strongSwan APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  OPENSSL_VERSION: "3.3.1"
+  NDK_VERSION: "27.3.13750724"
+  CUSTOM_APP_ID: "com.asadvpn.client"
+  CUSTOM_APP_NAME: "AsadVPN"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config gettext python3 bison flex gperf perl curl unzip git libssl-dev libgmp-dev
+
+      - name: Set environment
+        run: |
+          echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+
+      - name: Clone strongSwan
+        run: git clone --depth 1 https://github.com/strongswan/strongswan.git ss-full
+
+      - name: Generate strongSwan source files
+        run: |
+          cd ss-full
+          ./autogen.sh
+          ./configure \
+            --enable-openssl \
+            --enable-eap-identity \
+            --enable-eap-mschapv2 \
+            --enable-eap-md5 \
+            --enable-eap-gtc \
+            --enable-eap-tls \
+            --enable-eap-ttls \
+            --enable-eap-tnc
+          make -j$(nproc) 2>&1 | tail -20 || echo "Host make done"
+          if [ ! -f src/libstrongswan/asn1/oid.c ]; then
+            cd src/libstrongswan/asn1 && perl oid.pl oid.txt oid.c oid.h && cd ../../..
+          fi
+          if [ ! -f Android.common.mk ]; then
+            VERSION=$(sed -n "s/^PACKAGE_VERSION='\(.*\)'/\1/p" configure | head -1)
+            echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
+          fi
+
+      - name: Download OpenSSL
+        run: |
+          curl -fL -o openssl.tar.gz "https://www.openssl.org/source/openssl-${{ env.OPENSSL_VERSION }}.tar.gz"
+          tar xzf openssl.tar.gz
+
+      - name: Build OpenSSL for Android
+        run: |
+          set -e
+          export ANDROID_NDK_ROOT="${ANDROID_NDK_HOME}"
+          export PATH="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin:${PATH}"
+
+          build_ssl() {
+            local ABI=$1 TARGET=$2
+            echo "===== Building OpenSSL for ${ABI} ====="
+            local BUILD_DIR="${GITHUB_WORKSPACE}/openssl-build-${ABI}"
+            local OUT_DIR="${GITHUB_WORKSPACE}/openssl-out-${ABI}"
+            rm -rf "${BUILD_DIR}" "${OUT_DIR}"
+            cp -r "openssl-${{ env.OPENSSL_VERSION }}" "${BUILD_DIR}"
+            cd "${BUILD_DIR}"
+            ./Configure "${TARGET}" \
+              -D__ANDROID_API__=21 \
+              --prefix="${OUT_DIR}" \
+              --openssldir="${OUT_DIR}" \
+              --libdir=lib \
+              no-tests no-ui-console
+            make -j$(nproc)
+            make install_sw
+            cd "${GITHUB_WORKSPACE}"
+          }
+
+          build_ssl arm64-v8a android-arm64
+          build_ssl armeabi-v7a android-arm
+          build_ssl x86 android-x86
+          build_ssl x86_64 android-x86_64
+
+      - name: Setup OpenSSL in JNI directory
+        run: |
+          set -e
+          OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
+          mkdir -p "${OSSL}/include"
+          cp -r "${GITHUB_WORKSPACE}/openssl-out-arm64-v8a/include/openssl" "${OSSL}/include/"
+
+          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
+            DEST="${OSSL}/${ABI}"
+            mkdir -p "${DEST}"
+            OUT="${GITHUB_WORKSPACE}/openssl-out-${ABI}/lib"
+            for LIB in libcrypto libssl; do
+              REAL=$(find "${OUT}" -name "${LIB}.so*" ! -type l 2>/dev/null | head -1)
+              if [ -n "${REAL}" ]; then
+                cp "${REAL}" "${DEST}/${LIB}.so"
+              else
+                cp -L "${OUT}/${LIB}.so" "${DEST}/${LIB}.so"
+              fi
+            done
+            echo "${ABI}: $(ls ${DEST}/)"
+          done
+
+      - name: Create openssl Android.mk
+        run: |
+          TARGET="ss-full/src/frontends/android/app/src/main/jni/openssl/Android.mk"
+          cat > "${TARGET}" << 'ENDOFMK'
+          LOCAL_PATH := $(call my-dir)
+
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libcrypto
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := crypto_static
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libssl
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := ssl_static
+          LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.so
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_SHARED_LIBRARY)
+          ENDOFMK
+          sed -i 's/^          //' "${TARGET}"
+
+      - name: Patch strongSwan for build (BYOD + eap-tls + OpenSSL)
+        run: |
+          cd ss-full
+          JNI_MK="src/frontends/android/app/src/main/jni/Android.mk"
+          JNI_DIR="src/frontends/android/app/src/main/jni"
+
+          echo "=== 1. Disable BYOD ==="
+          sed -i 's/^strongswan_USE_BYOD := true/strongswan_USE_BYOD :=/' "${JNI_MK}"
+
+          echo "=== 2. Remove eap-tls from plugins ==="
+          sed -i 's/ eap-tls//' "${JNI_MK}"
+
+          echo "=== 3. Disable BYOD in Java ==="
+          find src/frontends/android -name "*.java" -exec grep -l "USE_BYOD" {} \; | while read f; do
+            sed -i 's/USE_BYOD = true/USE_BYOD = false/g' "$f"
+          done
+
+          echo "=== 4. Fix OpenSSL references ==="
+          find "${JNI_DIR}" -name "*.mk" -exec grep -l "crypto_static\|ssl_static" {} \; 2>/dev/null | while read mkfile; do
+            echo "  Patching: ${mkfile}"
+            sed -i '/LOCAL_STATIC_LIBRARIES.*crypto_static/{ s/crypto_static// }' "${mkfile}"
+            sed -i '/LOCAL_STATIC_LIBRARIES.*ssl_static/{ s/ssl_static// }' "${mkfile}"
+            if ! grep -q "LOCAL_SHARED_LIBRARIES.*crypto_static" "${mkfile}"; then
+              if grep -q "LOCAL_SHARED_LIBRARIES" "${mkfile}"; then
+                sed -i '0,/LOCAL_SHARED_LIBRARIES/{s/LOCAL_SHARED_LIBRARIES\(.*\)/LOCAL_SHARED_LIBRARIES\1 crypto_static ssl_static/}' "${mkfile}"
+              else
+                sed -i '/include \$(BUILD_SHARED_LIBRARY)/i LOCAL_SHARED_LIBRARIES += crypto_static ssl_static' "${mkfile}"
+              fi
+            fi
+          done
+
+      - name: Rebrand as AsadVPN (applicationId only - no Java rename)
+        run: |
+          cd ss-full/src/frontends/android
+
+          echo "============================================"
+          echo "=== Rebranding to ${CUSTOM_APP_NAME}"
+          echo "=== applicationId: ${CUSTOM_APP_ID}"
+          echo "=== Java namespace stays: org.strongswan.android"
+          echo "============================================"
+
+          echo ""
+          echo "--- 1. Change applicationId in build.gradle ---"
+          # Only change applicationId, NOT namespace
+          sed -i "s|applicationId \"org.strongswan.android\"|applicationId \"${CUSTOM_APP_ID}\"|g" app/build.gradle
+          echo "applicationId changed:"
+          grep "applicationId" app/build.gradle
+
+          echo ""
+          echo "--- 2. Change app name in strings.xml ---"
+          find . -name "strings.xml" | while read str; do
+            # Change the app_name string value
+            sed -i "s|<string name=\"app_name\">strongSwan VPN Client</string>|<string name=\"app_name\">${CUSTOM_APP_NAME}</string>|g" "${str}"
+          done
+          echo "App name changed:"
+          grep "app_name" app/src/main/res/values/strings.xml || true
+
+          echo ""
+          echo "--- 3. Verify namespace is UNTOUCHED ---"
+          grep "namespace" app/build.gradle
+          echo "(Should still say org.strongswan.android)"
+
+      - name: Create AsadVPN custom files
+        run: |
+          cd ss-full/src/frontends/android
+          # All custom code goes in org.strongswan.android package (same as the app)
+          JAVA_DIR="app/src/main/java/org/strongswan/android"
+          RES_DIR="app/src/main/res"
+
+          echo "=== Creating AsadVPN logic classes ==="
+
+          # --- ProfileCrypto.java ---
+          mkdir -p "${JAVA_DIR}/logic"
+          cat > "${JAVA_DIR}/logic/ProfileCrypto.java" << 'JAVA_EOF'
+          package org.strongswan.android.logic;
+
+          import android.util.Base64;
+          import java.nio.charset.StandardCharsets;
+          import java.security.MessageDigest;
+          import javax.crypto.Cipher;
+          import javax.crypto.spec.GCMParameterSpec;
+          import javax.crypto.spec.SecretKeySpec;
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+
+          public class ProfileCrypto {
+
+              private static final String MASTER_KEY = "As4dVPN-2024!SecretKey#Encrypted";
+
+              public static class ProfileData {
+                  public String username;
+                  public String password;
+                  public String[] servers;
+                  public String[] serverNames;
+                  public long expiryTimestamp;
+                  public String profileId;
+                  public String updateUrl;
+
+                  public boolean isExpired() {
+                      return System.currentTimeMillis() > expiryTimestamp;
+                  }
+
+                  public int remainingDays() {
+                      long diff = expiryTimestamp - System.currentTimeMillis();
+                      if (diff <= 0) return 0;
+                      return (int)(diff / (1000L * 60 * 60 * 24));
+                  }
+              }
+
+              public static ProfileData decryptProfile(String encryptedBase64) throws Exception {
+                  byte[] encrypted = Base64.decode(encryptedBase64, Base64.DEFAULT | Base64.NO_WRAP);
+                  byte[] iv = new byte[12];
+                  byte[] ciphertext = new byte[encrypted.length - 12];
+                  System.arraycopy(encrypted, 0, iv, 0, 12);
+                  System.arraycopy(encrypted, 12, ciphertext, 0, ciphertext.length);
+
+                  MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+                  byte[] keyBytes = sha256.digest(MASTER_KEY.getBytes(StandardCharsets.UTF_8));
+                  SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
+
+                  Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                  GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
+                  cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec);
+
+                  byte[] plaintext = cipher.doFinal(ciphertext);
+                  String json = new String(plaintext, StandardCharsets.UTF_8);
+                  return parseProfile(json);
+              }
+
+              public static ProfileData parseProfile(String json) throws Exception {
+                  JSONObject obj = new JSONObject(json);
+                  ProfileData data = new ProfileData();
+                  data.profileId = obj.getString("id");
+                  data.username = obj.getString("username");
+                  data.password = obj.getString("password");
+                  data.expiryTimestamp = obj.getLong("expiry");
+                  data.updateUrl = obj.optString("updateUrl", "");
+
+                  JSONArray serversArr = obj.getJSONArray("servers");
+                  data.servers = new String[serversArr.length()];
+                  data.serverNames = new String[serversArr.length()];
+                  for (int i = 0; i < serversArr.length(); i++) {
+                      JSONObject s = serversArr.getJSONObject(i);
+                      data.servers[i] = s.getString("addr");
+                      data.serverNames[i] = s.optString("name", data.servers[i]);
+                  }
+                  return data;
+              }
+
+              public static String encryptProfile(String json) throws Exception {
+                  MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+                  byte[] keyBytes = sha256.digest(MASTER_KEY.getBytes(StandardCharsets.UTF_8));
+                  SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
+
+                  Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                  cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+                  byte[] iv = cipher.getIV();
+                  byte[] ciphertext = cipher.doFinal(json.getBytes(StandardCharsets.UTF_8));
+
+                  byte[] combined = new byte[iv.length + ciphertext.length];
+                  System.arraycopy(iv, 0, combined, 0, iv.length);
+                  System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
+                  return Base64.encodeToString(combined, Base64.NO_WRAP);
+              }
+          }
+          JAVA_EOF
+
+          # --- ProfileManager.java ---
+          cat > "${JAVA_DIR}/logic/ProfileManager.java" << 'JAVA_EOF'
+          package org.strongswan.android.logic;
+
+          import android.content.Context;
+          import android.content.SharedPreferences;
+          import android.util.Log;
+          import org.json.JSONObject;
+          import org.json.JSONArray;
+          import java.io.BufferedReader;
+          import java.io.InputStreamReader;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+
+          public class ProfileManager {
+              private static final String TAG = "AsadVPN";
+              private static final String PREFS_NAME = "asadvpn_profiles";
+              private static final String KEY_PROFILE = "active_profile";
+              private static final String KEY_ENCRYPTED = "encrypted_data";
+              private static final String KEY_LAST_UPDATE = "last_update_check";
+              private static final long UPDATE_INTERVAL = 2 * 24 * 60 * 60 * 1000L;
+
+              private final Context context;
+              private final SharedPreferences prefs;
+
+              public ProfileManager(Context context) {
+                  this.context = context;
+                  this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+              }
+
+              public ProfileCrypto.ProfileData importProfile(String encryptedData) throws Exception {
+                  ProfileCrypto.ProfileData data = ProfileCrypto.decryptProfile(encryptedData);
+                  prefs.edit()
+                      .putString(KEY_ENCRYPTED, encryptedData)
+                      .putString(KEY_PROFILE, dataToJson(data))
+                      .putLong(KEY_LAST_UPDATE, System.currentTimeMillis())
+                      .apply();
+                  Log.i(TAG, "Profile imported: " + data.profileId +
+                        ", servers: " + data.servers.length +
+                        ", expires in " + data.remainingDays() + " days");
+                  return data;
+              }
+
+              public ProfileCrypto.ProfileData getActiveProfile() {
+                  String json = prefs.getString(KEY_PROFILE, null);
+                  if (json == null) return null;
+                  try {
+                      return ProfileCrypto.parseProfile(json);
+                  } catch (Exception e) {
+                      Log.e(TAG, "Failed to parse stored profile", e);
+                      return null;
+                  }
+              }
+
+              public boolean hasProfile() {
+                  return prefs.getString(KEY_PROFILE, null) != null;
+              }
+
+              public void clearProfile() {
+                  prefs.edit().clear().apply();
+              }
+
+              public void checkForUpdates(UpdateCallback callback) {
+                  ProfileCrypto.ProfileData data = getActiveProfile();
+                  if (data == null || data.updateUrl == null || data.updateUrl.isEmpty()) return;
+
+                  long lastUpdate = prefs.getLong(KEY_LAST_UPDATE, 0);
+                  if (System.currentTimeMillis() - lastUpdate < UPDATE_INTERVAL) return;
+
+                  new Thread(() -> {
+                      try {
+                          URL url = new URL(data.updateUrl);
+                          HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                          conn.setConnectTimeout(10000);
+                          conn.setReadTimeout(10000);
+                          BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                          StringBuilder sb = new StringBuilder();
+                          String line;
+                          while ((line = reader.readLine()) != null) sb.append(line);
+                          reader.close();
+
+                          String newEncrypted = sb.toString().trim();
+                          ProfileCrypto.ProfileData newData = ProfileCrypto.decryptProfile(newEncrypted);
+                          newData.expiryTimestamp = data.expiryTimestamp;
+                          newData.username = data.username;
+                          newData.password = data.password;
+
+                          prefs.edit()
+                              .putString(KEY_PROFILE, dataToJson(newData))
+                              .putLong(KEY_LAST_UPDATE, System.currentTimeMillis())
+                              .apply();
+
+                          Log.i(TAG, "Server list updated: " + newData.servers.length + " servers");
+                          if (callback != null) callback.onUpdated(newData);
+                      } catch (Exception e) {
+                          Log.w(TAG, "Update check failed", e);
+                          if (callback != null) callback.onError(e);
+                      }
+                  }).start();
+              }
+
+              private String dataToJson(ProfileCrypto.ProfileData data) {
+                  try {
+                      JSONObject obj = new JSONObject();
+                      obj.put("id", data.profileId);
+                      obj.put("username", data.username);
+                      obj.put("password", data.password);
+                      obj.put("expiry", data.expiryTimestamp);
+                      obj.put("updateUrl", data.updateUrl != null ? data.updateUrl : "");
+                      JSONArray servers = new JSONArray();
+                      for (int i = 0; i < data.servers.length; i++) {
+                          JSONObject s = new JSONObject();
+                          s.put("addr", data.servers[i]);
+                          s.put("name", data.serverNames[i]);
+                          servers.put(s);
+                      }
+                      obj.put("servers", servers);
+                      return obj.toString();
+                  } catch (Exception e) {
+                      return "{}";
+                  }
+              }
+
+              public interface UpdateCallback {
+                  void onUpdated(ProfileCrypto.ProfileData newData);
+                  void onError(Exception e);
+              }
+          }
+          JAVA_EOF
+
+          # --- FastServerSelector.java ---
+          cat > "${JAVA_DIR}/logic/FastServerSelector.java" << 'JAVA_EOF'
+          package org.strongswan.android.logic;
+
+          import android.util.Log;
+          import java.net.InetAddress;
+          import java.util.ArrayList;
+          import java.util.List;
+          import java.util.concurrent.Callable;
+          import java.util.concurrent.ExecutorService;
+          import java.util.concurrent.Executors;
+          import java.util.concurrent.Future;
+          import java.util.concurrent.TimeUnit;
+
+          public class FastServerSelector {
+              private static final String TAG = "AsadVPN";
+              private static final int MAX_TEST = 5;
+              private static final int TIMEOUT_MS = 2000;
+
+              public static class ServerResult {
+                  public String address;
+                  public String name;
+                  public long latencyMs;
+              }
+
+              public static ServerResult findFastest(String[] servers, String[] names) {
+                  if (servers == null || servers.length == 0) return null;
+
+                  if (servers.length == 1) {
+                      ServerResult r = new ServerResult();
+                      r.address = servers[0];
+                      r.name = names[0];
+                      r.latencyMs = 0;
+                      return r;
+                  }
+
+                  int testCount = Math.min(servers.length, MAX_TEST);
+                  ExecutorService executor = Executors.newFixedThreadPool(testCount);
+                  List<Future<ServerResult>> futures = new ArrayList<>();
+
+                  for (int i = 0; i < testCount; i++) {
+                      final int idx = i;
+                      final String addr = servers[i];
+                      final String name = names[i];
+                      futures.add(executor.submit(() -> {
+                          ServerResult result = new ServerResult();
+                          result.address = addr;
+                          result.name = name;
+                          long start = System.currentTimeMillis();
+                          try {
+                              InetAddress inet = InetAddress.getByName(addr);
+                              boolean reachable = inet.isReachable(TIMEOUT_MS);
+                              result.latencyMs = System.currentTimeMillis() - start;
+                              if (!reachable) result.latencyMs = Long.MAX_VALUE;
+                          } catch (Exception e) {
+                              result.latencyMs = Long.MAX_VALUE;
+                          }
+                          Log.d(TAG, "Ping " + addr + ": " + result.latencyMs + "ms");
+                          return result;
+                      }));
+                  }
+
+                  ServerResult best = null;
+                  try {
+                      executor.shutdown();
+                      executor.awaitTermination(3, TimeUnit.SECONDS);
+                      for (Future<ServerResult> f : futures) {
+                          if (f.isDone()) {
+                              try {
+                                  ServerResult r = f.get();
+                                  if (best == null || r.latencyMs < best.latencyMs) best = r;
+                              } catch (Exception ignore) {}
+                          }
+                      }
+                  } catch (InterruptedException e) {
+                      Log.w(TAG, "Server selection interrupted");
+                  }
+
+                  if (best == null || best.latencyMs == Long.MAX_VALUE) {
+                      best = new ServerResult();
+                      best.address = servers[0];
+                      best.name = names[0];
+                      best.latencyMs = -1;
+                      Log.w(TAG, "All pings failed, using first server: " + best.address);
+                  } else {
+                      Log.i(TAG, "Fastest server: " + best.address + " (" + best.latencyMs + "ms)");
+                  }
+                  return best;
+              }
+          }
+          JAVA_EOF
+
+          echo "=== Logic classes created ==="
+          ls -la "${JAVA_DIR}/logic/ProfileCrypto.java" "${JAVA_DIR}/logic/ProfileManager.java" "${JAVA_DIR}/logic/FastServerSelector.java"
+
+      - name: Create AsadVPN UI resources
+        run: |
+          cd ss-full/src/frontends/android
+          RES_DIR="app/src/main/res"
+
+          # --- activity_asadvpn_main.xml ---
+          cat > "${RES_DIR}/layout/activity_asadvpn_main.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:gravity="center_horizontal"
+              android:background="#1a1a2e"
+              android:padding="24dp">
+
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="AsadVPN"
+                  android:textSize="32sp"
+                  android:textColor="#00d4aa"
+                  android:textStyle="bold"
+                  android:layout_marginTop="40dp" />
+
+              <TextView
+                  android:id="@+id/status_text"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="Disconnected"
+                  android:textSize="18sp"
+                  android:textColor="#ffffff"
+                  android:layout_marginTop="16dp" />
+
+              <TextView
+                  android:id="@+id/server_text"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text=""
+                  android:textSize="14sp"
+                  android:textColor="#aaaaaa"
+                  android:layout_marginTop="8dp" />
+
+              <TextView
+                  android:id="@+id/days_text"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text=""
+                  android:textSize="16sp"
+                  android:textColor="#ffcc00"
+                  android:layout_marginTop="16dp" />
+
+              <Button
+                  android:id="@+id/connect_button"
+                  android:layout_width="200dp"
+                  android:layout_height="200dp"
+                  android:layout_marginTop="40dp"
+                  android:background="@drawable/circle_button_connect"
+                  android:text="CONNECT"
+                  android:textSize="20sp"
+                  android:textColor="#ffffff"
+                  android:textStyle="bold" />
+
+              <View
+                  android:layout_width="0dp"
+                  android:layout_height="0dp"
+                  android:layout_weight="1" />
+
+              <Button
+                  android:id="@+id/import_button"
+                  android:layout_width="match_parent"
+                  android:layout_height="48dp"
+                  android:text="Import Profile"
+                  android:textColor="#ffffff"
+                  android:backgroundTint="#333355"
+                  android:layout_marginBottom="8dp" />
+
+              <Button
+                  android:id="@+id/scan_button"
+                  android:layout_width="match_parent"
+                  android:layout_height="48dp"
+                  android:text="Scan QR Code"
+                  android:textColor="#ffffff"
+                  android:backgroundTint="#333355"
+                  android:layout_marginBottom="16dp" />
+          </LinearLayout>
+          XML_EOF
+
+          # --- dialog_import_profile.xml ---
+          cat > "${RES_DIR}/layout/dialog_import_profile.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:padding="24dp">
+
+              <TextView
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:text="Paste your encrypted profile code below:"
+                  android:textSize="14sp"
+                  android:layout_marginBottom="12dp" />
+
+              <EditText
+                  android:id="@+id/profile_input"
+                  android:layout_width="match_parent"
+                  android:layout_height="120dp"
+                  android:hint="Paste encrypted profile here..."
+                  android:gravity="top"
+                  android:inputType="textMultiLine"
+                  android:background="#f0f0f0"
+                  android:padding="8dp" />
+          </LinearLayout>
+          XML_EOF
+
+          # --- circle_button_connect.xml ---
+          mkdir -p "${RES_DIR}/drawable"
+          cat > "${RES_DIR}/drawable/circle_button_connect.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:state_pressed="true">
+                  <shape android:shape="oval">
+                      <solid android:color="#008866" />
+                      <stroke android:width="3dp" android:color="#00d4aa" />
+                  </shape>
+              </item>
+              <item>
+                  <shape android:shape="oval">
+                      <solid android:color="#00aa88" />
+                      <stroke android:width="3dp" android:color="#00d4aa" />
+                  </shape>
+              </item>
+          </selector>
+          XML_EOF
+
+          # --- circle_button_disconnect.xml ---
+          cat > "${RES_DIR}/drawable/circle_button_disconnect.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:state_pressed="true">
+                  <shape android:shape="oval">
+                      <solid android:color="#cc3333" />
+                      <stroke android:width="3dp" android:color="#ff4444" />
+                  </shape>
+              </item>
+              <item>
+                  <shape android:shape="oval">
+                      <solid android:color="#dd4444" />
+                      <stroke android:width="3dp" android:color="#ff4444" />
+                  </shape>
+              </item>
+          </selector>
+          XML_EOF
+
+          echo "=== UI resources created ==="
+
+      - name: Create AsadVPN Main Activity
+        run: |
+          cd ss-full/src/frontends/android
+          JAVA_DIR="app/src/main/java/org/strongswan/android"
+
+          cat > "${JAVA_DIR}/ui/AsadMainActivity.java" << 'JAVA_EOF'
+          package org.strongswan.android.ui;
+
+          import android.app.Activity;
+          import android.app.AlertDialog;
+          import android.content.ComponentName;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.ServiceConnection;
+          import android.net.Uri;
+          import android.net.VpnService;
+          import android.os.Bundle;
+          import android.os.IBinder;
+          import android.util.Log;
+          import android.view.View;
+          import android.widget.Button;
+          import android.widget.EditText;
+          import android.widget.TextView;
+          import android.widget.Toast;
+
+          import org.strongswan.android.R;
+          import org.strongswan.android.data.VpnProfile;
+          import org.strongswan.android.data.VpnProfileDataSource;
+          import org.strongswan.android.data.VpnType;
+          import org.strongswan.android.logic.CharonVpnService;
+          import org.strongswan.android.logic.FastServerSelector;
+          import org.strongswan.android.logic.ProfileCrypto;
+          import org.strongswan.android.logic.ProfileManager;
+          import org.strongswan.android.logic.VpnStateService;
+          import org.strongswan.android.logic.VpnStateService.State;
+
+          public class AsadMainActivity extends Activity implements VpnStateService.VpnStateListener {
+              private static final String TAG = "AsadVPN";
+              private static final int VPN_REQUEST_CODE = 100;
+              private static final int QR_REQUEST_CODE = 200;
+
+              private Button connectButton;
+              private Button importButton;
+              private Button scanButton;
+              private TextView statusText;
+              private TextView serverText;
+              private TextView daysText;
+
+              private ProfileManager profileManager;
+              private ProfileCrypto.ProfileData activeProfile;
+              private VpnStateService mService;
+              private String pendingServer;
+
+              private final ServiceConnection mServiceConnection = new ServiceConnection() {
+                  @Override
+                  public void onServiceConnected(ComponentName name, IBinder binder) {
+                      mService = ((VpnStateService.LocalBinder) binder).getService();
+                      mService.registerListener(AsadMainActivity.this);
+                      refreshUI();
+                  }
+                  @Override
+                  public void onServiceDisconnected(ComponentName name) {
+                      mService = null;
+                  }
+              };
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  setContentView(R.layout.activity_asadvpn_main);
+
+                  connectButton = findViewById(R.id.connect_button);
+                  importButton = findViewById(R.id.import_button);
+                  scanButton = findViewById(R.id.scan_button);
+                  statusText = findViewById(R.id.status_text);
+                  serverText = findViewById(R.id.server_text);
+                  daysText = findViewById(R.id.days_text);
+
+                  profileManager = new ProfileManager(this);
+
+                  connectButton.setOnClickListener(v -> onConnectClicked());
+                  importButton.setOnClickListener(v -> showImportDialog());
+                  scanButton.setOnClickListener(v -> startQrScanner());
+
+                  bindService(new Intent(this, VpnStateService.class),
+                      mServiceConnection, BIND_AUTO_CREATE);
+
+                  profileManager.checkForUpdates(new ProfileManager.UpdateCallback() {
+                      @Override
+                      public void onUpdated(ProfileCrypto.ProfileData newData) {
+                          runOnUiThread(() -> {
+                              activeProfile = newData;
+                              refreshUI();
+                              Toast.makeText(AsadMainActivity.this,
+                                  "Server list updated!", Toast.LENGTH_SHORT).show();
+                          });
+                      }
+                      @Override
+                      public void onError(Exception e) {
+                          Log.w(TAG, "Update check failed: " + e.getMessage());
+                      }
+                  });
+              }
+
+              @Override
+              protected void onDestroy() {
+                  super.onDestroy();
+                  if (mService != null) {
+                      mService.unregisterListener(this);
+                      unbindService(mServiceConnection);
+                  }
+              }
+
+              @Override
+              protected void onResume() {
+                  super.onResume();
+                  refreshUI();
+              }
+
+              @Override
+              public void stateChanged() {
+                  runOnUiThread(this::refreshUI);
+              }
+
+              private void refreshUI() {
+                  activeProfile = profileManager.getActiveProfile();
+
+                  if (activeProfile == null) {
+                      statusText.setText("No Profile");
+                      daysText.setText("Import a profile to get started");
+                      serverText.setText("");
+                      connectButton.setText("NO\nPROFILE");
+                      connectButton.setEnabled(false);
+                      connectButton.setBackgroundResource(R.drawable.circle_button_connect);
+                      return;
+                  }
+
+                  if (activeProfile.isExpired()) {
+                      statusText.setText("Profile Expired");
+                      daysText.setText("0 days remaining");
+                      serverText.setText("");
+                      connectButton.setText("EXPIRED");
+                      connectButton.setEnabled(false);
+                      connectButton.setBackgroundResource(R.drawable.circle_button_connect);
+                      showExpiredDialog();
+                      return;
+                  }
+
+                  int days = activeProfile.remainingDays();
+                  daysText.setText(days + " day" + (days != 1 ? "s" : "") + " remaining");
+
+                  // Check VPN state from service
+                  State state = (mService != null) ? mService.getState() : State.DISABLED;
+
+                  switch (state) {
+                      case CONNECTED:
+                          statusText.setText("Connected");
+                          connectButton.setText("DISCONNECT");
+                          connectButton.setBackgroundResource(R.drawable.circle_button_disconnect);
+                          connectButton.setEnabled(true);
+                          break;
+                      case CONNECTING:
+                          statusText.setText("Connecting...");
+                          connectButton.setText("...");
+                          connectButton.setEnabled(false);
+                          break;
+                      case DISCONNECTING:
+                          statusText.setText("Disconnecting...");
+                          connectButton.setText("...");
+                          connectButton.setEnabled(false);
+                          break;
+                      default:
+                          statusText.setText("Disconnected");
+                          connectButton.setText("CONNECT");
+                          connectButton.setBackgroundResource(R.drawable.circle_button_connect);
+                          connectButton.setEnabled(true);
+                          serverText.setText(activeProfile.servers.length + " servers available");
+                          break;
+                  }
+              }
+
+              private void onConnectClicked() {
+                  if (activeProfile == null) {
+                      showImportDialog();
+                      return;
+                  }
+                  if (activeProfile.isExpired()) {
+                      showExpiredDialog();
+                      return;
+                  }
+
+                  State state = (mService != null) ? mService.getState() : State.DISABLED;
+                  if (state == State.CONNECTED || state == State.CONNECTING) {
+                      disconnect();
+                  } else {
+                      connect();
+                  }
+              }
+
+              private void connect() {
+                  statusText.setText("Finding best server...");
+                  connectButton.setEnabled(false);
+
+                  new Thread(() -> {
+                      FastServerSelector.ServerResult fastest =
+                          FastServerSelector.findFastest(activeProfile.servers, activeProfile.serverNames);
+
+                      if (fastest == null) {
+                          runOnUiThread(() -> {
+                              refreshUI();
+                              Toast.makeText(this, "No servers available", Toast.LENGTH_SHORT).show();
+                          });
+                          return;
+                      }
+
+                      runOnUiThread(() -> {
+                          serverText.setText("→ " + fastest.name);
+                          pendingServer = fastest.address;
+                          Intent intent = VpnService.prepare(this);
+                          if (intent != null) {
+                              startActivityForResult(intent, VPN_REQUEST_CODE);
+                          } else {
+                              launchVpn(fastest.address);
+                          }
+                      });
+                  }).start();
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == VPN_REQUEST_CODE) {
+                      if (resultCode == RESULT_OK && pendingServer != null) {
+                          launchVpn(pendingServer);
+                      } else {
+                          refreshUI();
+                      }
+                  } else if (requestCode == QR_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
+                      String scanned = data.getStringExtra("SCAN_RESULT");
+                      if (scanned != null && !scanned.isEmpty()) {
+                          importProfile(scanned);
+                      }
+                  }
+              }
+
+              private void launchVpn(String serverAddress) {
+                  try {
+                      VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+                      dataSource.open();
+
+                      VpnProfile profile = new VpnProfile();
+                      profile.setName("AsadVPN - " + serverAddress);
+                      profile.setGateway(serverAddress);
+                      profile.setUsername(activeProfile.username);
+                      profile.setPassword(activeProfile.password);
+                      profile.setVpnType(VpnType.IKEV2_EAP);
+
+                      VpnProfile saved = dataSource.insertProfile(profile);
+                      dataSource.close();
+
+                      Intent intent = new Intent(this, CharonVpnService.class);
+                      intent.putExtra(CharonVpnService.PROFILE_UUID, saved.getUUID().toString());
+                      startService(intent);
+
+                  } catch (Exception e) {
+                      Log.e(TAG, "Failed to start VPN", e);
+                      Toast.makeText(this, "Connection failed: " + e.getMessage(),
+                          Toast.LENGTH_LONG).show();
+                      refreshUI();
+                  }
+              }
+
+              private void disconnect() {
+                  if (mService != null) {
+                      mService.disconnect();
+                  }
+                  refreshUI();
+              }
+
+              private void showImportDialog() {
+                  View dialogView = getLayoutInflater().inflate(R.layout.dialog_import_profile, null);
+                  EditText input = dialogView.findViewById(R.id.profile_input);
+
+                  new AlertDialog.Builder(this)
+                      .setTitle("Import Profile")
+                      .setView(dialogView)
+                      .setPositiveButton("Import", (dialog, which) -> {
+                          String text = input.getText().toString().trim();
+                          if (!text.isEmpty()) {
+                              importProfile(text);
+                          } else {
+                              Toast.makeText(this, "Please paste a profile code",
+                                  Toast.LENGTH_SHORT).show();
+                          }
+                      })
+                      .setNegativeButton("Cancel", null)
+                      .show();
+              }
+
+              private void importProfile(String encryptedData) {
+                  try {
+                      activeProfile = profileManager.importProfile(encryptedData);
+                      if (activeProfile.isExpired()) {
+                          showExpiredDialog();
+                          return;
+                      }
+                      Toast.makeText(this, "Profile imported! " +
+                          activeProfile.servers.length + " servers, " +
+                          activeProfile.remainingDays() + " days remaining",
+                          Toast.LENGTH_LONG).show();
+                      refreshUI();
+                  } catch (Exception e) {
+                      Log.e(TAG, "Import failed", e);
+                      Toast.makeText(this, "Invalid profile code: " + e.getMessage(),
+                          Toast.LENGTH_LONG).show();
+                  }
+              }
+
+              private void startQrScanner() {
+                  try {
+                      Intent intent = new Intent("com.google.zxing.client.android.SCAN");
+                      intent.putExtra("SCAN_MODE", "QR_CODE_MODE");
+                      startActivityForResult(intent, QR_REQUEST_CODE);
+                  } catch (Exception e) {
+                      Toast.makeText(this,
+                          "Please install a QR scanner app, or paste the code manually",
+                          Toast.LENGTH_LONG).show();
+                  }
+              }
+
+              private void showExpiredDialog() {
+                  new AlertDialog.Builder(this)
+                      .setTitle("Subscription Expired")
+                      .setMessage("Your VPN subscription has expired.\n\n" +
+                          "To renew your subscription, please contact support.")
+                      .setPositiveButton("Contact Support", (dialog, which) -> {
+                          startActivity(new Intent(Intent.ACTION_VIEW,
+                              Uri.parse("https://t.me/vpnproxytestsupport")));
+                      })
+                      .setNegativeButton("Close", null)
+                      .setCancelable(false)
+                      .show();
+              }
+          }
+          JAVA_EOF
+
+          echo "=== AsadMainActivity.java created ==="
+
+      - name: Patch AndroidManifest for AsadVPN launcher
+        run: |
+          cd ss-full/src/frontends/android
+          MANIFEST="app/src/main/AndroidManifest.xml"
+
+          python3 << 'PYEOF'
+          import re
+
+          with open("app/src/main/AndroidManifest.xml", "r") as f:
+              content = f.read()
+
+          # Remove LAUNCHER category from ALL existing activities
+          # This makes the original MainActivity no longer the launcher
+          content = content.replace(
+              '<category android:name="android.intent.category.LAUNCHER" />',
+              '<!-- launcher moved to AsadMainActivity -->'
+          )
+
+          # Add our AsadMainActivity before </application>
+          asad_activity = '''
+                  <activity
+                      android:name="org.strongswan.android.ui.AsadMainActivity"
+                      android:label="AsadVPN"
+                      android:exported="true"
+                      android:theme="@style/ApplicationTheme">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+          '''
+          content = content.replace('</application>', asad_activity + '    </application>')
+
+          with open("app/src/main/AndroidManifest.xml", "w") as f:
+              f.write(content)
+
+          print("AndroidManifest.xml patched for AsadVPN")
+          PYEOF
+
+          echo ""
+          echo "=== Verifying manifest ==="
+          grep -n "LAUNCHER\|AsadMain\|MainActivity\|applicationId\|package=" "${MANIFEST}" | head -20
+
+      - name: Pre-build verification
+        run: |
+          cd ss-full/src/frontends/android
+          echo "============================================"
+          echo "=== FINAL VERIFICATION BEFORE BUILD ==="
+          echo "============================================"
+
+          echo ""
+          echo "--- applicationId ---"
+          grep "applicationId" app/build.gradle
+
+          echo ""
+          echo "--- namespace ---"
+          grep "namespace" app/build.gradle
+
+          echo ""
+          echo "--- app_name ---"
+          grep "app_name" app/src/main/res/values/strings.xml | head -3
+
+          echo ""
+          echo "--- Launcher activity ---"
+          grep -A3 "LAUNCHER" app/src/main/AndroidManifest.xml
+
+          echo ""
+          echo "--- Custom Java files ---"
+          ls -la app/src/main/java/org/strongswan/android/logic/ProfileCrypto.java
+          ls -la app/src/main/java/org/strongswan/android/logic/ProfileManager.java
+          ls -la app/src/main/java/org/strongswan/android/logic/FastServerSelector.java
+          ls -la app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
+
+          echo ""
+          echo "--- Custom layouts ---"
+          ls -la app/src/main/res/layout/activity_asadvpn_main.xml
+          ls -la app/src/main/res/layout/dialog_import_profile.xml
+          ls -la app/src/main/res/drawable/circle_button_connect.xml
+          ls -la app/src/main/res/drawable/circle_button_disconnect.xml
+
+          echo ""
+          echo "--- Check no broken R imports ---"
+          echo "All Java files importing R:"
+          grep -r "import.*\.R;" app/src/main/java/ --include="*.java" | sort -u | head -20
+          echo "(All should say org.strongswan.android.R)"
+
+      - name: Test ndk-build (dry run)
+        run: |
+          cd ss-full/src/frontends/android/app/src/main/jni
+          ${ANDROID_NDK_HOME}/ndk-build \
+            NDK_PROJECT_PATH=null \
+            APP_BUILD_SCRIPT=$(pwd)/Android.mk \
+            NDK_APPLICATION_MK=$(pwd)/Application.mk \
+            APP_ABI=arm64-v8a \
+            NDK_DEBUG=1 \
+            APP_PLATFORM=android-21 \
+            NDK_OUT=/tmp/ndk-out \
+            NDK_LIBS_OUT=/tmp/ndk-libs \
+            -n -B 2>&1 | tee /tmp/ndk-test.log || true
+          echo ""
+          echo "=== ERRORS ==="
+          grep -i "undefined modules\|depends on\|No such file\|No rule to make\|Stop\." /tmp/ndk-test.log | head -20 || echo "No critical errors"
+
+      - name: Build APK
+        run: |
+          cd ss-full/src/frontends/android
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+          sed -i "s|arguments '-j'|arguments 'APP_ALLOW_MISSING_DEPS=true', '-j'|" app/build.gradle
+          set +e
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee "${GITHUB_WORKSPACE}/build.log"
+          RESULT=${PIPESTATUS[0]}
+          set -e
+          if [ ${RESULT} -ne 0 ]; then
+            echo ""
+            echo "##############################################"
+            echo "# BUILD FAILED"
+            echo "##############################################"
+            echo ""
+            echo "=== Java errors ==="
+            grep -E "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter\|TaskExecution\|EventFiring\|DefaultBuild" | head -30
+            echo ""
+            echo "=== Cannot find symbol ==="
+            grep -B1 "cannot find symbol" "${GITHUB_WORKSPACE}/build.log" | head -20
+            echo ""
+            echo "=== Package errors ==="
+            grep "package.*does not exist" "${GITHUB_WORKSPACE}/build.log" | head -20
+            exit 1
+          fi
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asadvpn-debug-apk
+          path: ss-full/src/frontends/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: warn
