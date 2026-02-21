@@ -2,18 +2,24 @@ package com.ikev2client
 
 import android.app.Notification
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.net.Ikev2VpnProfile
+import android.net.VpnManager
 import android.net.VpnService
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
-import android.os.ParcelFileDescriptor
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import com.google.gson.Gson
 import com.ikev2client.model.VpnProfile
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.io.ByteArrayInputStream
+import java.util.Timer
+import java.util.TimerTask
 
 class VpnConnectionService : VpnService() {
 
@@ -31,6 +37,10 @@ class VpnConnectionService : VpnService() {
             private set
 
         var stateListener: ((ConnectionState, String?) -> Unit)? = null
+
+        fun prepareVpn(context: Context): Intent? {
+            return VpnService.prepare(context)
+        }
     }
 
     enum class ConnectionState {
@@ -42,8 +52,8 @@ class VpnConnectionService : VpnService() {
     }
 
     private val binder = LocalBinder()
-    private var vpnInterface: ParcelFileDescriptor? = null
-    private var connectionThread: Thread? = null
+    private var expiryTimer: Timer? = null
+    private var currentProfile: VpnProfile? = null
 
     inner class LocalBinder : Binder() {
         fun getService(): VpnConnectionService = this@VpnConnectionService
@@ -56,7 +66,7 @@ class VpnConnectionService : VpnService() {
             ACTION_CONNECT -> {
                 val profileJson = intent.getStringExtra(EXTRA_PROFILE_JSON)
                 if (profileJson != null) {
-                    val profile = com.google.gson.Gson().fromJson(profileJson, VpnProfile::class.java)
+                    val profile = Gson().fromJson(profileJson, VpnProfile::class.java)
                     startConnection(profile)
                 }
             }
@@ -68,7 +78,7 @@ class VpnConnectionService : VpnService() {
     }
 
     private fun startConnection(profile: VpnProfile) {
-        // Check expiry
+        // Check expiry first
         if (profile.isExpired()) {
             updateState(ConnectionState.ERROR, "Profile has expired")
             stopSelf()
@@ -77,154 +87,156 @@ class VpnConnectionService : VpnService() {
 
         updateState(ConnectionState.CONNECTING, null)
         currentProfileId = profile.id
+        currentProfile = profile
         isRunning = true
 
         startForeground(1, createNotification("Connecting to ${profile.name}..."))
 
-        connectionThread = Thread {
-            try {
-                connectIKEv2(profile)
-            } catch (e: Exception) {
-                Log.e(TAG, "Connection failed", e)
-                updateState(ConnectionState.ERROR, e.message)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                connectWithPlatformApi(profile)
+            } else {
+                updateState(ConnectionState.ERROR, "Android 11+ required for IKEv2")
                 stopConnection()
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Connection failed", e)
+            updateState(ConnectionState.ERROR, e.message ?: "Connection failed")
+            stopConnection()
         }
-        connectionThread?.start()
     }
 
-    private fun connectIKEv2(profile: VpnProfile) {
-        // Using Android's built-in VPN builder with strongSwan charon
-        // This creates the TUN interface and routes traffic
-
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun connectWithPlatformApi(profile: VpnProfile) {
         try {
-            val builder = Builder()
-                .setSession(profile.name)
-                .setMtu(profile.mtu)
-                .addAddress("10.0.0.2", 32)
-                .addRoute("0.0.0.0", 0)
-                .addDnsServer("8.8.8.8")
-                .addDnsServer("8.8.4.4")
+            val vpnManager = getSystemService(Context.VPN_MANAGEMENT_SERVICE) as? VpnManager
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                builder.setMetered(false)
+            // Build IKEv2 profile using Android's built-in API
+            val builder = Ikev2VpnProfile.Builder(profile.server, profile.remoteId)
+
+            // Set authentication
+            when (profile.authMethod) {
+                "eap-mschapv2", "eap-md5", "eap" -> {
+                    builder.setAuthUsernamePassword(
+                        profile.username,
+                        profile.password,
+                        null  // server root CA cert — null means system trust store
+                    )
+                }
+                "psk" -> {
+                    if (!profile.psk.isNullOrBlank()) {
+                        builder.setAuthPsk(profile.psk.toByteArray())
+                    } else {
+                        builder.setAuthPsk(profile.password.toByteArray())
+                    }
+                }
+                else -> {
+                    builder.setAuthUsernamePassword(
+                        profile.username,
+                        profile.password,
+                        null
+                    )
+                }
             }
 
-            // Establish TUN interface
-            vpnInterface = builder.establish()
+            // Set CA certificate if provided
+            if (!profile.caCert.isNullOrBlank()) {
+                try {
+                    val certFactory = CertificateFactory.getInstance("X.509")
+                    val certBytes = profile.caCert.toByteArray()
+                    val cert = certFactory.generateCertificate(
+                        ByteArrayInputStream(certBytes)
+                    ) as X509Certificate
 
-            if (vpnInterface == null) {
-                updateState(ConnectionState.ERROR, "Failed to establish VPN interface")
-                return
+                    // Rebuild with server CA
+                    val builderWithCa = Ikev2VpnProfile.Builder(profile.server, profile.remoteId)
+                    builderWithCa.setAuthUsernamePassword(
+                        profile.username,
+                        profile.password,
+                        cert
+                    )
+                    builderWithCa.setMaxMtu(profile.mtu)
+                    builderWithCa.setBypassable(profile.splitTunneling)
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        // Android 13+ features if available
+                    }
+
+                    val ikev2Profile = builderWithCa.build()
+                    vpnManager?.provisionVpnProfile(ikev2Profile)
+
+                    Log.d(TAG, "IKEv2 profile provisioned with custom CA")
+                } catch (certError: Exception) {
+                    Log.w(TAG, "Failed to parse CA cert, using system trust store", certError)
+                    // Fall through to use without custom CA
+                    builder.setMaxMtu(profile.mtu)
+                    builder.setBypassable(profile.splitTunneling)
+                    val ikev2Profile = builder.build()
+                    vpnManager?.provisionVpnProfile(ikev2Profile)
+                }
+            } else {
+                builder.setMaxMtu(profile.mtu)
+                builder.setBypassable(profile.splitTunneling)
+                val ikev2Profile = builder.build()
+                vpnManager?.provisionVpnProfile(ikev2Profile)
             }
 
-            // Launch strongSwan charon daemon via command
-            launchCharon(profile)
+            // Start the VPN
+            vpnManager?.startProvisionedVpnProfile()
 
             updateState(ConnectionState.CONNECTED, null)
             updateNotification("Connected to ${profile.name}")
+            Log.d(TAG, "IKEv2 VPN connected to ${profile.server}")
 
-            // Monitor connection
-            monitorConnection(profile)
+            // Start expiry monitoring
+            startExpiryMonitor(profile)
 
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security exception - VPN permission may be needed", e)
+            updateState(ConnectionState.ERROR, "VPN permission denied: ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "Invalid VPN profile configuration", e)
+            updateState(ConnectionState.ERROR, "Invalid config: ${e.message}")
         } catch (e: Exception) {
-            Log.e(TAG, "IKEv2 connection error", e)
-            updateState(ConnectionState.ERROR, e.message)
+            Log.e(TAG, "Failed to connect", e)
+            updateState(ConnectionState.ERROR, "Connection failed: ${e.message}")
         }
     }
 
-    private fun launchCharon(profile: VpnProfile) {
-        // Write strongSwan configuration
-        val configDir = filesDir.resolve("strongswan")
-        configDir.mkdirs()
-
-        // ipsec.conf equivalent
-        val charonConf = configDir.resolve("charon.conf")
-        charonConf.writeText(buildString {
-            appendLine("charon {")
-            appendLine("  load_modular = yes")
-            appendLine("  plugins {")
-            appendLine("    include strongswan.d/charon/*.conf")
-            appendLine("  }")
-            appendLine("}")
-        })
-
-        // Connection configuration
-        val connConf = configDir.resolve("ipsec.conf")
-        connConf.writeText(buildString {
-            appendLine("config setup")
-            appendLine("  charondebug=\"ike 2, knl 2, cfg 2\"")
-            appendLine("")
-            appendLine("conn ikev2-vpn")
-            appendLine("  auto=start")
-            appendLine("  type=tunnel")
-            appendLine("  keyexchange=ikev2")
-            appendLine("  left=%defaultroute")
-            appendLine("  leftid=${profile.username}")
-            appendLine("  leftauth=${profile.authMethod}")
-            appendLine("  right=${profile.server}")
-            appendLine("  rightid=${profile.remoteId}")
-            appendLine("  rightauth=pubkey")
-            appendLine("  rightsubnet=0.0.0.0/0")
-            appendLine("  ike=aes256-sha256-modp2048!")
-            appendLine("  esp=aes256-sha256!")
-            appendLine("  fragmentation=yes")
-            appendLine("  rekey=no")
-        })
-
-        // Secrets
-        val secretsConf = configDir.resolve("ipsec.secrets")
-        secretsConf.writeText(
-            "${profile.username} : EAP \"${profile.password}\"\n"
-        )
-
-        // CA certificate
-        if (!profile.caCert.isNullOrBlank()) {
-            val certDir = configDir.resolve("ipsec.d/cacerts")
-            certDir.mkdirs()
-            certDir.resolve("ca.pem").writeText(profile.caCert)
-        }
-
-        Log.d(TAG, "strongSwan config written to ${configDir.absolutePath}")
-
-        // Note: In a real strongSwan Android integration, you would use
-        // the strongSwan VPN service library directly. This config file
-        // approach shows the configuration structure.
-        // The actual strongSwan Android library handles this internally.
-    }
-
-    private fun monitorConnection(profile: VpnProfile) {
-        // Monitor loop — check expiry every 30 seconds
-        while (isRunning && connectionState == ConnectionState.CONNECTED) {
-            if (profile.isExpired()) {
-                Log.w(TAG, "Profile expired during connection, disconnecting")
-                updateState(ConnectionState.DISCONNECTING, "Profile expired")
-                stopConnection()
-                return
+    private fun startExpiryMonitor(profile: VpnProfile) {
+        expiryTimer?.cancel()
+        expiryTimer = Timer()
+        expiryTimer?.scheduleAtFixedRate(object : TimerTask() {
+            override fun run() {
+                if (profile.isExpired()) {
+                    Log.w(TAG, "Profile expired during connection")
+                    android.os.Handler(mainLooper).post {
+                        updateState(ConnectionState.DISCONNECTING, "Profile expired")
+                        stopConnection()
+                    }
+                }
             }
-            try {
-                Thread.sleep(30_000) // Check every 30 seconds
-            } catch (e: InterruptedException) {
-                break
-            }
-        }
+        }, 30_000, 30_000) // Check every 30 seconds
     }
 
     fun stopConnection() {
         updateState(ConnectionState.DISCONNECTING, null)
         isRunning = false
-
-        connectionThread?.interrupt()
-        connectionThread = null
+        expiryTimer?.cancel()
+        expiryTimer = null
 
         try {
-            vpnInterface?.close()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val vpnManager = getSystemService(Context.VPN_MANAGEMENT_SERVICE) as? VpnManager
+                vpnManager?.stopProvisionedVpnProfile()
+                vpnManager?.deleteProvisionedVpnProfile()
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error closing VPN interface", e)
+            Log.e(TAG, "Error stopping VPN", e)
         }
-        vpnInterface = null
 
         currentProfileId = null
+        currentProfile = null
         updateState(ConnectionState.DISCONNECTED, null)
 
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -234,7 +246,7 @@ class VpnConnectionService : VpnService() {
     private fun updateState(state: ConnectionState, message: String?) {
         connectionState = state
         stateListener?.invoke(state, message)
-        Log.d(TAG, "State: $state ${message ?: ""}")
+        Log.d(TAG, "VPN State: $state ${message ?: ""}")
     }
 
     private fun createNotification(text: String): Notification {
@@ -257,6 +269,12 @@ class VpnConnectionService : VpnService() {
         val notification = createNotification(text)
         val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.notify(1, notification)
+    }
+
+    override fun onRevoke() {
+        Log.w(TAG, "VPN revoked by system")
+        stopConnection()
+        super.onRevoke()
     }
 
     override fun onDestroy() {
