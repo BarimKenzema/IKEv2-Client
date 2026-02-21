@@ -1,8 +1,13 @@
 package com.ikev2client
 
 import android.content.Intent
+import android.net.Ikev2VpnProfile
+import android.net.VpnManager
 import android.net.VpnService
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,6 +21,9 @@ import com.ikev2client.crypto.ProfileCrypto
 import com.ikev2client.databinding.ActivityMainBinding
 import com.ikev2client.model.VpnProfile
 import com.ikev2client.storage.ProfileStorage
+import java.io.ByteArrayInputStream
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 
 class MainActivity : AppCompatActivity() {
 
@@ -23,12 +31,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var storage: ProfileStorage
     private lateinit var adapter: ProfileAdapter
     private var pendingProfile: VpnProfile? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val vpnConsentLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            pendingProfile?.let { connectToProfile(it) }
+            pendingProfile?.let { provisionAndStartVpn(it) }
         } else {
             Toast.makeText(this, "VPN permission denied", Toast.LENGTH_SHORT).show()
         }
@@ -110,6 +119,8 @@ class MainActivity : AppCompatActivity() {
         // If connected to another, disconnect first
         if (VpnConnectionService.isRunning) {
             disconnectVpn()
+            mainHandler.postDelayed({ requestVpnConsent(profile) }, 500)
+            return
         }
 
         if (profile.isExpired()) {
@@ -117,35 +128,122 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Step 1: Get VPN consent from user
+        requestVpnConsent(profile)
+    }
+
+    private fun requestVpnConsent(profile: VpnProfile) {
+        // Step 1: Get VPN consent from the system
         val consentIntent = VpnService.prepare(this)
         if (consentIntent != null) {
-            // System needs user to approve VPN — show dialog
             pendingProfile = profile
             vpnConsentLauncher.launch(consentIntent)
         } else {
-            // Already have consent — connect directly
-            connectToProfile(profile)
+            // Already have consent
+            provisionAndStartVpn(profile)
         }
     }
 
-    private fun connectToProfile(profile: VpnProfile) {
-        val intent = Intent(this, VpnConnectionService::class.java).apply {
-            action = VpnConnectionService.ACTION_CONNECT
-            putExtra(VpnConnectionService.EXTRA_PROFILE_JSON, Gson().toJson(profile))
+    private fun provisionAndStartVpn(profile: VpnProfile) {
+        try {
+            val vpnManager = getSystemService(VpnManager::class.java)
+            if (vpnManager == null) {
+                Toast.makeText(this, "VpnManager not available on this device", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            // Build the IKEv2 profile
+            val ikev2Profile = buildIkev2Profile(profile)
+
+            // Provision the profile with the system
+            try {
+                vpnManager.provisionVpnProfile(ikev2Profile)
+            } catch (e: SecurityException) {
+                Toast.makeText(this, "VPN provision denied: ${e.message}", Toast.LENGTH_LONG).show()
+                return
+            } catch (e: Exception) {
+                Toast.makeText(this, "Provision failed: ${e.message}", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            // Start the provisioned VPN
+            try {
+                vpnManager.startProvisionedVpnProfile()
+            } catch (e: SecurityException) {
+                Toast.makeText(this, "VPN start denied: ${e.message}", Toast.LENGTH_LONG).show()
+                return
+            } catch (e: IllegalStateException) {
+                Toast.makeText(this, "No profile provisioned: ${e.message}", Toast.LENGTH_LONG).show()
+                return
+            } catch (e: Exception) {
+                Toast.makeText(this, "Start failed: ${e.message}", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            // Start the monitoring service
+            val serviceIntent = Intent(this, VpnConnectionService::class.java).apply {
+                action = VpnConnectionService.ACTION_MONITOR
+                putExtra(VpnConnectionService.EXTRA_PROFILE_JSON, Gson().toJson(profile))
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+
+            storage.setActiveProfileId(profile.id)
+            refreshProfiles()
+
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun buildIkev2Profile(profile: VpnProfile): Ikev2VpnProfile {
+        val builder = Ikev2VpnProfile.Builder(profile.server, profile.remoteId)
+
+        // Parse CA certificate if provided
+        var caCert: X509Certificate? = null
+        if (!profile.caCert.isNullOrBlank()) {
+            try {
+                val cf = CertificateFactory.getInstance("X.509")
+                caCert = cf.generateCertificate(
+                    ByteArrayInputStream(profile.caCert.toByteArray(Charsets.UTF_8))
+                ) as X509Certificate
+            } catch (e: Exception) {
+                // Fall back to system trust store
+            }
         }
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
+        // Set authentication
+        when (profile.authMethod) {
+            "psk" -> {
+                val psk = (profile.psk ?: profile.password).toByteArray(Charsets.UTF_8)
+                builder.setAuthPsk(psk)
+            }
+            else -> {
+                // EAP (MSCHAPv2, etc.)
+                builder.setAuthUsernamePassword(
+                    profile.username,
+                    profile.password,
+                    caCert
+                )
+            }
         }
 
-        storage.setActiveProfileId(profile.id)
-        refreshProfiles()
+        builder.setMaxMtu(profile.mtu)
+        builder.setBypassable(profile.splitTunneling)
+
+        return builder.build()
     }
 
     private fun disconnectVpn() {
+        // Stop via VpnManager
+        try {
+            val vpnManager = getSystemService(VpnManager::class.java)
+            vpnManager?.stopProvisionedVpnProfile()
+        } catch (e: Exception) { }
+
+        // Stop monitoring service
         val intent = Intent(this, VpnConnectionService::class.java).apply {
             action = VpnConnectionService.ACTION_DISCONNECT
         }
