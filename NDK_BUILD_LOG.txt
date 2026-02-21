@@ -1,3 +1,0 @@
-Android NDK: WARNING: APP_PLATFORM android-21 is higher than android:minSdkVersion 1 in /tmp/ss-full/src/frontends/android/app/src/main/AndroidManifest.xml. NDK binaries will *not* be compatible with devices older than android-21. See https://android.googlesource.com/platform/ndk/+/master/docs/user/common_problems.md for more information.    
-make: *** No rule to make target '/tmp/ss-full/src/frontends/android/app/src/main/jni/../../../../../../..//src/libstrongswan/asn1/oid.c', needed by '/tmp/ss-full/src/frontends/android/app/src/main/obj/local/arm64-v8a/objs/strongswan/asn1/oid.o'.  Stop.
-make: *** Waiting for unfinished jobs....
