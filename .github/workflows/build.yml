@@ -44,9 +44,9 @@ jobs:
 
     - name: Install Gradle
       run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
-        unzip -q gradle-8.11.1-bin.zip -d /opt
-        echo "/opt/gradle-8.11.1/bin" >> $GITHUB_PATH
+        wget -q https://services.gradle.org/distributions/gradle-8.13-bin.zip
+        unzip -q gradle-8.13-bin.zip -d /opt
+        echo "/opt/gradle-8.13/bin" >> $GITHUB_PATH
 
     - name: Generate strongSwan build files
       run: |
@@ -73,7 +73,7 @@ jobs:
     - name: Generate Gradle wrapper
       run: |
         cd ss-full/src/frontends/android
-        gradle wrapper --gradle-version 8.11.1 --no-configuration-cache
+        gradle wrapper --gradle-version 8.13 --no-configuration-cache
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
 
