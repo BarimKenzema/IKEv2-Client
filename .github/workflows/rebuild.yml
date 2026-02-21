@@ -19,87 +19,254 @@ jobs:
       run: |
         find . -maxdepth 1 -not -name '.git' -not -name '.github' -not -name '.' -exec rm -rf {} \;
 
-    - name: Clone strongSwan source
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Clone strongSwan Android project
       run: |
-        git clone --depth 1 https://github.com/nicholass003/strongswan-android.git /tmp/ss-android || true
+        git clone --depth 1 https://github.com/strongswan/strongswan.git /tmp/ss-main
+        cp -r /tmp/ss-main/src/frontends/android/* .
         
-        if [ ! -d /tmp/ss-android/app ]; then
-          echo "Trying official repo..."
-          git clone --depth 1 https://github.com/nicholass003/strongswan-android-apk.git /tmp/ss-android || true
-        fi
+        echo "=== Copied files ==="
+        ls -la
+
+    - name: Install NDK
+      run: |
+        yes | sdkmanager "ndk;27.3.13750724" 2>/dev/null || true
+        yes | sdkmanager "platforms;android-36" 2>/dev/null || true
+        yes | sdkmanager "build-tools;36.0.0" 2>/dev/null || true
         
-        if [ ! -d /tmp/ss-android/app ]; then
-          echo "Trying strongSwan main repo..."
-          git clone --depth 1 https://github.com/strongswan/strongswan.git /tmp/ss-main
-          
-          echo "=== Android frontend location ==="
-          ls -la /tmp/ss-main/src/frontends/android/ 2>/dev/null
-          ls -la /tmp/ss-main/src/frontends/android/app/ 2>/dev/null
-          
-          mkdir -p /tmp/ss-android
-          cp -r /tmp/ss-main/src/frontends/android/* /tmp/ss-android/ 2>/dev/null || true
+        # Also try the version in build.gradle
+        yes | sdkmanager "platforms;android-34" 2>/dev/null || true
+        yes | sdkmanager "build-tools;34.0.0" 2>/dev/null || true
+
+    - name: Build OpenSSL using their Docker script
+      run: |
+        cd openssl
+        
+        # Check what their build script expects
+        echo "=== build.sh ==="
+        cat build.sh
+        echo ""
+        echo "=== compile.sh ==="
+        cat compile.sh
+        echo ""
+        echo "=== Dockerfile ==="
+        cat Dockerfile
+
+    - name: Compile OpenSSL for Android
+      run: |
+        # Install OpenSSL build dependencies
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+
+        export ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/27.3.13750724
+        
+        # Download OpenSSL 3.x (what current strongSwan uses)
+        cd /tmp
+        wget -q https://github.com/openssl/openssl/releases/download/openssl-3.4.1/openssl-3.4.1.tar.gz
+        tar xzf openssl-3.4.1.tar.gz
+        
+        OPENSSL_SRC=/tmp/openssl-3.4.1
+        TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64
+        
+        # Build for arm64-v8a
+        echo "Building OpenSSL for arm64..."
+        cd $OPENSSL_SRC
+        make clean 2>/dev/null || true
+        
+        export PATH=$TOOLCHAIN/bin:$PATH
+        export ANDROID_API=21
+        
+        ./Configure android-arm64 \
+          -D__ANDROID_API__=$ANDROID_API \
+          --prefix=/tmp/openssl-out/arm64-v8a \
+          no-shared no-tests no-ui-console 2>&1 | tail -5
+        
+        make -j$(nproc) 2>&1 | tail -5
+        make install_sw 2>&1 | tail -3
+        
+        # Build for armeabi-v7a
+        echo "Building OpenSSL for arm..."
+        make clean 2>/dev/null || true
+        
+        ./Configure android-arm \
+          -D__ANDROID_API__=$ANDROID_API \
+          --prefix=/tmp/openssl-out/armeabi-v7a \
+          no-shared no-tests no-ui-console 2>&1 | tail -5
+        
+        make -j$(nproc) 2>&1 | tail -5
+        make install_sw 2>&1 | tail -3
+        
+        # Build for x86_64
+        echo "Building OpenSSL for x86_64..."
+        make clean 2>/dev/null || true
+        
+        ./Configure android-x86_64 \
+          -D__ANDROID_API__=$ANDROID_API \
+          --prefix=/tmp/openssl-out/x86_64 \
+          no-shared no-tests no-ui-console 2>&1 | tail -5
+        
+        make -j$(nproc) 2>&1 | tail -5
+        make install_sw 2>&1 | tail -3
+        
+        echo "=== OpenSSL build complete ==="
+        ls -la /tmp/openssl-out/arm64-v8a/lib/
+        ls -la /tmp/openssl-out/armeabi-v7a/lib/
+
+    - name: Setup OpenSSL for strongSwan JNI build
+      run: |
+        # strongSwan JNI expects openssl libs in a specific place
+        # Check what Android.mk expects
+        echo "=== Main Android.mk ==="
+        cat app/src/main/jni/Android.mk
+        
+        # Create the openssl directory structure that Android.mk expects
+        JNI_DIR=app/src/main/jni
+        
+        # Create openssl Android.mk that points to our built libraries
+        cat > $JNI_DIR/openssl/Android.mk << 'MKEOF'
+        LOCAL_PATH := $(call my-dir)
+        
+        include $(CLEAR_VARS)
+        LOCAL_MODULE := libcrypto_static
+        LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/lib/libcrypto.a
+        LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/$(TARGET_ARCH_ABI)/include
+        include $(PREBUILT_STATIC_LIBRARY)
+        
+        include $(CLEAR_VARS)
+        LOCAL_MODULE := libssl_static
+        LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/lib/libssl.a
+        LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/$(TARGET_ARCH_ABI)/include
+        include $(PREBUILT_STATIC_LIBRARY)
+        MKEOF
+        
+        mkdir -p $JNI_DIR/openssl/arm64-v8a
+        mkdir -p $JNI_DIR/openssl/armeabi-v7a
+        mkdir -p $JNI_DIR/openssl/x86_64
+        
+        cp -r /tmp/openssl-out/arm64-v8a/lib $JNI_DIR/openssl/arm64-v8a/
+        cp -r /tmp/openssl-out/arm64-v8a/include $JNI_DIR/openssl/arm64-v8a/
+        cp -r /tmp/openssl-out/armeabi-v7a/lib $JNI_DIR/openssl/armeabi-v7a/
+        cp -r /tmp/openssl-out/armeabi-v7a/include $JNI_DIR/openssl/armeabi-v7a/
+        cp -r /tmp/openssl-out/x86_64/lib $JNI_DIR/openssl/x86_64/
+        cp -r /tmp/openssl-out/x86_64/include $JNI_DIR/openssl/x86_64/
+        
+        echo "=== OpenSSL setup complete ==="
+        ls -la $JNI_DIR/openssl/
+
+    - name: Prepare strongSwan JNI source
+      run: |
+        # The Android.mk includes sources from the main strongSwan tree
+        # We need to create symlinks or copy the C sources
+        SS_ROOT=/tmp/ss-main
+        JNI_DIR=app/src/main/jni
+        
+        # Check what paths Android.mk references
+        grep -E "strongswan_DIR|SRC_DIR" $JNI_DIR/Android.mk | head -20
+        
+        # The JNI build expects the full strongSwan source tree
+        # Create a symlink so it can find the sources
+        ln -sf $SS_ROOT $JNI_DIR/strongswan 2>/dev/null || true
+        
+        echo "=== JNI dir contents ==="
+        ls -la $JNI_DIR/
+
+    - name: Create local.properties
+      run: |
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+        echo "ndk.dir=$ANDROID_HOME/ndk/27.3.13750724" >> local.properties
+
+    - name: Add our custom files
+      run: |
+        # Add Crypto.java
+        cat > app/src/main/java/org/strongswan/android/utils/Crypto.java << 'EOF'
+        package org.strongswan.android.utils;
+        
+        import android.util.Base64;
+        import javax.crypto.Cipher;
+        import javax.crypto.spec.IvParameterSpec;
+        import javax.crypto.spec.SecretKeySpec;
+        import java.security.MessageDigest;
+        import java.util.Arrays;
+        
+        public class Crypto {
+            private static final String MASTER_KEY = "IKEv2SecureProfileKey2025";
+        
+            public static String encrypt(String plainText) throws Exception {
+                byte[] key = deriveKey(MASTER_KEY);
+                byte[] iv = new byte[16];
+                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv));
+                return Base64.encodeToString(cipher.doFinal(plainText.getBytes("UTF-8")), Base64.NO_WRAP);
+            }
+        
+            public static String decrypt(String encryptedText) throws Exception {
+                byte[] key = deriveKey(MASTER_KEY);
+                byte[] iv = new byte[16];
+                Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new IvParameterSpec(iv));
+                return new String(cipher.doFinal(Base64.decode(encryptedText.trim(), Base64.DEFAULT)), "UTF-8");
+            }
+        
+            private static byte[] deriveKey(String password) throws Exception {
+                MessageDigest sha = MessageDigest.getInstance("SHA-256");
+                return Arrays.copyOf(sha.digest(password.getBytes("UTF-8")), 16);
+            }
+        }
+        EOF
+
+    - name: Try building with Gradle
+      run: |
+        chmod +x gradlew
+        
+        # First try building just to see what happens
+        ./gradlew assembleDebug --stacktrace 2>&1 | tee build_output.txt || true
+        
+        echo "=== LAST 80 LINES ==="
+        tail -80 build_output.txt
+
+    - name: Show errors if failed
+      if: failure()
+      run: |
+        cat build_output.txt 2>/dev/null || echo "No build output"
+
+    - name: Check for APK
+      run: |
+        echo "=== Looking for APK ==="
+        find . -name "*.apk" -type f 2>/dev/null
+        
+        if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+          echo "BUILD SUCCEEDED!"
+        else
+          echo "No APK found yet - checking build output for clues"
+          tail -50 build_output.txt
         fi
 
-    - name: Explore structure
+    - name: Commit all files
       run: |
-        echo "========== TOP LEVEL ==========" > EXPLORATION.md
-        ls -la /tmp/ss-android/ >> EXPLORATION.md 2>&1
+        # Remove the symlink before committing (git doesn't like dangling symlinks)
+        rm -f app/src/main/jni/strongswan 2>/dev/null || true
         
-        echo "" >> EXPLORATION.md
-        echo "========== BUILD FILES ==========" >> EXPLORATION.md
-        find /tmp/ss-android -maxdepth 3 -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "gradlew" -o -name "AndroidManifest.xml" -o -name "Android.mk" 2>/dev/null >> EXPLORATION.md
+        # Save build output for reference
+        cp build_output.txt BUILD_LOG.txt 2>/dev/null || true
         
-        echo "" >> EXPLORATION.md
-        echo "========== JAVA FILES ==========" >> EXPLORATION.md
-        find /tmp/ss-android -name "*.java" -type f 2>/dev/null >> EXPLORATION.md
-        
-        echo "" >> EXPLORATION.md
-        echo "========== AIDL FILES ==========" >> EXPLORATION.md
-        find /tmp/ss-android -name "*.aidl" -type f 2>/dev/null >> EXPLORATION.md
-        
-        echo "" >> EXPLORATION.md
-        echo "========== JNI FILES ==========" >> EXPLORATION.md
-        find /tmp/ss-android -name "*.mk" -type f 2>/dev/null >> EXPLORATION.md
-        find /tmp/ss-android -name "*.c" -type f 2>/dev/null | head -20 >> EXPLORATION.md
-        
-        echo "" >> EXPLORATION.md
-        echo "========== RES FILES ==========" >> EXPLORATION.md
-        find /tmp/ss-android -path "*/res/layout/*" -type f 2>/dev/null >> EXPLORATION.md
-        find /tmp/ss-android -path "*/res/values/*" -type f 2>/dev/null >> EXPLORATION.md
-        
-        echo "" >> EXPLORATION.md
-        echo "========== FULL TREE (depth 5) ==========" >> EXPLORATION.md
-        find /tmp/ss-android -maxdepth 5 -type f 2>/dev/null >> EXPLORATION.md
-        
-        echo "" >> EXPLORATION.md
-        echo "========== MAIN REPO ANDROID DIR ==========" >> EXPLORATION.md
-        find /tmp/ss-main/src/frontends/android -maxdepth 5 -type f 2>/dev/null >> EXPLORATION.md || true
-        
-        echo "" >> EXPLORATION.md
-        echo "========== CHARONSVC CONTENT ==========" >> EXPLORATION.md
-        find /tmp -name "CharonVpnService.java" -exec head -50 {} \; >> EXPLORATION.md 2>/dev/null || echo "Not found" >> EXPLORATION.md
-        
-        echo "" >> EXPLORATION.md
-        echo "========== APP BUILD.GRADLE ==========" >> EXPLORATION.md
-        find /tmp -path "*/android/app/build.gradle" -exec cat {} \; >> EXPLORATION.md 2>/dev/null || echo "Not found" >> EXPLORATION.md
-        
-        echo "" >> EXPLORATION.md
-        echo "========== SETTINGS.GRADLE ==========" >> EXPLORATION.md
-        find /tmp/ss-android -name "settings.gradle" -exec cat {} \; >> EXPLORATION.md 2>/dev/null
-        find /tmp/ss-main/src/frontends/android -name "settings.gradle" -exec cat {} \; >> EXPLORATION.md 2>/dev/null || true
-        
-        echo "" >> EXPLORATION.md
-        echo "========== ROOT BUILD.GRADLE ==========" >> EXPLORATION.md
-        cat /tmp/ss-android/build.gradle >> EXPLORATION.md 2>/dev/null || true
-        cat /tmp/ss-main/src/frontends/android/build.gradle >> EXPLORATION.md 2>/dev/null || true
-        
-        echo "" >> EXPLORATION.md
-        echo "DONE" >> EXPLORATION.md
-
-    - name: Commit results
-      run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add -A
-        git commit -m "Explore strongSwan Android structure" || true
+        git commit -m "Import strongSwan Android project with patches" || true
         git push || true
+
+    - name: Upload APK
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: IKEv2-Client
+        path: |
+          app/build/outputs/apk/debug/app-debug.apk
+          BUILD_LOG.txt
+        compression-level: 0
+        if-no-files-found: warn
