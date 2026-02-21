@@ -1,1 +1,0 @@
--keep class com.ikev2client.model.** { *; }
