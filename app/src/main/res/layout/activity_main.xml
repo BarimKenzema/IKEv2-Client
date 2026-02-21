@@ -34,7 +34,7 @@
         android:id="@+id/btnScanQr"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:text="📷  Scan QR Code"
+        android:text="Scan QR Code"
         android:textSize="16sp"
         android:layout_marginBottom="12dp" />
 
@@ -42,7 +42,7 @@
         android:id="@+id/btnPasteProfile"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:text="📋  Paste Encrypted Profile"
+        android:text="Paste Encrypted Profile"
         android:textSize="16sp"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_marginBottom="12dp" />
@@ -51,7 +51,7 @@
         android:id="@+id/btnViewProfiles"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:text="📂  View Profiles & Connect"
+        android:text="View Profiles and Connect"
         android:textSize="16sp"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_marginBottom="12dp" />
@@ -60,7 +60,7 @@
         android:id="@+id/btnCleanExpired"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:text="🗑️  Remove Expired Profiles"
+        android:text="Remove Expired Profiles"
         android:textSize="14sp"
         style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_marginTop="8dp" />
