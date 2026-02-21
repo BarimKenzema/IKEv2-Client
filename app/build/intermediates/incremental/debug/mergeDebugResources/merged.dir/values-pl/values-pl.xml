@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="http://schemas.android.com/tools" xmlns:ns2="urn:oasis:names:tc:xliff:document:1.2">
+    <string-array name="apps_handling">
+        <item>All applications use the VPN</item>
+        <item>Exclude selected applications from the VPN</item>
+        <item>Only selected applications use the VPN</item>
+    </string-array>
+    <string-array name="vpn_types">
+        <item>IKEv2 EAP (użytkownik/hasło)</item>
+        <item>IKEv2 certyfikat</item>
+        <item>IKEv2 certyfikat + EAP (użytkownik/hasło)</item>
+        <item>IKEv2 EAP-TLS (certyfikat)</item>
+        <item>IKEv2 EAP-TNC (użytkownik/hasło)</item>
+    </string-array>
+    <plurals name="clear_crl_cache_msg" ns1:ignore="MissingQuantity">
+        <item quantity="one">The CRL cache contains %1$d file (%2$s).</item>
+        <item quantity="other">The CRL cache contains %1$d files (%2$s).</item>
+    </plurals>
+    <plurals name="mtrl_badge_content_description">
+    <item quantity="one">%d nowe powiadomienie</item>
+    <item quantity="few">%d nowe powiadomienia</item>
+    <item quantity="many">%d nowych powiadomień</item>
+    <item quantity="other">%d nowego powiadomienia</item>
+  </plurals>
+    <plurals name="retry_in" ns1:ignore="MissingQuantity">
+        <item quantity="one">Retry in %1$d second</item>
+        <item quantity="other">Retry in %1$d seconds</item>
+    </plurals>
+    <string msgid="5976598919945601918" name="abc_action_bar_home_description">"Przejdź na stronę główną"</string>
+    <string msgid="8388173803310557296" name="abc_action_bar_up_description">"Przejdź wyżej"</string>
+    <string msgid="3937310113216875497" name="abc_action_menu_overflow_description">"Więcej opcji"</string>
+    <string msgid="4692188335987374352" name="abc_action_mode_done">"Gotowe"</string>
+    <string msgid="1189761859438369441" name="abc_activity_chooser_view_see_all">"Pokaż wszystko"</string>
+    <string msgid="2165779757652331008" name="abc_activitychooserview_choose_application">"Wybierz aplikację"</string>
+    <string msgid="4215997306490295099" name="abc_capital_off">"WYŁ."</string>
+    <string msgid="884982626291842264" name="abc_capital_on">"WŁ."</string>
+    <string msgid="8833365367933412986" name="abc_menu_alt_shortcut_label">"Alt+"</string>
+    <string msgid="2223301931652355242" name="abc_menu_ctrl_shortcut_label">"Ctrl+"</string>
+    <string msgid="838001238306846836" name="abc_menu_delete_shortcut_label">"Delete"</string>
+    <string msgid="7986526966204849475" name="abc_menu_enter_shortcut_label">"Enter"</string>
+    <string msgid="375214403600139847" name="abc_menu_function_shortcut_label">"Funkcyjny+"</string>
+    <string msgid="4192209724446364286" name="abc_menu_meta_shortcut_label">"Meta+"</string>
+    <string msgid="4741552369836443843" name="abc_menu_shift_shortcut_label">"Shift+"</string>
+    <string msgid="5473865519181928982" name="abc_menu_space_shortcut_label">"spacja"</string>
+    <string msgid="6180552449598693998" name="abc_menu_sym_shortcut_label">"Sym+"</string>
+    <string msgid="5520303668377388990" name="abc_prepend_shortcut_label">"Menu+"</string>
+    <string msgid="7208076849092622260" name="abc_search_hint">"Szukaj…"</string>
+    <string msgid="3741173234950517107" name="abc_searchview_description_clear">"Wyczyść zapytanie"</string>
+    <string msgid="693312494995508443" name="abc_searchview_description_query">"Zapytanie"</string>
+    <string msgid="3417662926640357176" name="abc_searchview_description_search">"Szukaj"</string>
+    <string msgid="1486535517437947103" name="abc_searchview_description_submit">"Wyślij zapytanie"</string>
+    <string msgid="2293578557972875415" name="abc_searchview_description_voice">"Wyszukiwanie głosowe"</string>
+    <string msgid="8875138169939072951" name="abc_shareactionprovider_share_with">"Udostępnij przez:"</string>
+    <string msgid="9055268688411532828" name="abc_shareactionprovider_share_with_application">"Udostępnij przez: <ns2:g id="APPLICATION_NAME">%s</ns2:g>"</string>
+    <string msgid="1656852541809559762" name="abc_toolbar_collapse_description">"Zwiń"</string>
+    <string name="add_profile">Dodaj profil VPN</string>
+    <string name="alert_text_no_input_gateway">A value is required to initiate the connection</string>
+    <string name="alert_text_no_input_username">Wprowadź swoją nazwę użytkownika</string>
+    <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
+    <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
+    <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
+    <string name="alert_text_nocertfound">Wybierz lub uaktywnij jeden <i>Wybierz automatycznie</i></string>
+    <string name="alert_text_nocertfound_title">Nie wybrano żadnego certyfikatu CA</string>
+    <string name="alert_text_out_of_range">Please enter a number in the range from %1$d - %2$d</string>
+    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password or user certificate</string>
+    <string name="app_name">strongSwan klient VPN</string>
+    <string name="bottomsheet_action_collapse">Zwiń planszę dolną</string>
+    <string name="bottomsheet_action_expand">Rozwiń planszę dolną</string>
+    <string name="bottomsheet_action_expand_halfway">Rozwiń do połowy</string>
+    <string name="bottomsheet_drag_handle_content_description">Uchwyt do przeciągania</string>
+    <string msgid="881409763997275156" name="call_notification_answer_action">"Odbierz"</string>
+    <string msgid="8793775615905189152" name="call_notification_answer_video_action">"Wideo"</string>
+    <string msgid="3229508546291798546" name="call_notification_decline_action">"Odrzuć"</string>
+    <string msgid="2659457946726154263" name="call_notification_hang_up_action">"Rozłącz"</string>
+    <string msgid="6107532579223922871" name="call_notification_incoming_text">"Połączenie przychodzące"</string>
+    <string msgid="8623827134497363134" name="call_notification_ongoing_text">"Trwa połączenie"</string>
+    <string msgid="59049573811482460" name="call_notification_screening_text">"Filtruję połączenie przychodzące"</string>
+    <string name="cancel_retry">Cancel retry</string>
+    <string name="cert_import_failed">Failed to import certificate</string>
+    <string name="cert_imported_successfully">Certificate successfully imported</string>
+    <string name="certificate_required_text">Please edit the VPN profile to select one.</string>
+    <string name="certificate_required_title">User certificate required</string>
+    <string name="character_counter_content_description">%1$d z %2$d znaków</string>
+    <string name="character_counter_overflowed_content_description">Przekroczono limit znaków (%1$d z %2$d)</string>
+    <string name="clear">Clear</string>
+    <string name="clear_crl_cache_msg_none">The CRL cache is empty</string>
+    <string name="clear_crl_cache_title">Clear CRL cache?</string>
+    <string name="clear_text_end_icon_content_description">Wyczyść tekst</string>
+    <string name="connect">Połącz</string>
+    <string name="connect_profile_question">Połącz %1$s?</string>
+    <string name="copied_name">%1$s (Copy)</string>
+    <string msgid="6083905920877235314" name="copy">"Kopiuj"</string>
+    <string name="copy_profile">Copy</string>
+    <string name="crl_cache">CRL cache</string>
+    <string name="delete_certificate">The certificate will be permanently removed!</string>
+    <string name="delete_certificate_question">Delete certificate?</string>
+    <string name="delete_profile">Usuń</string>
+    <string name="disconnect">Rozłącz</string>
+    <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
+    <string name="disconnect_question">Disconnect VPN?</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="edit_profile">Edytuj</string>
+    <string name="empty_log">Log jest pusty</string>
+    <string name="error_a11y_label">Błąd: nieprawidłowe</string>
+    <string name="error_assessment_failed">Security assessment failed</string>
+    <string name="error_auth_failed">Błąd przy autoryzacji użytkownika</string>
+    <string name="error_certificate_unavailable">Client certificate unavailable</string>
+    <string name="error_format">Nie udało się utworzyć tunelu VPN: %1$s.</string>
+    <string name="error_generic">Nieznany błąd w czasie połączenia</string>
+    <string name="error_icon_content_description">Błąd</string>
+    <string name="error_lookup_failed">Nie znaleziono adresu serwer</string>
+    <string name="error_password_missing">Password unavailable</string>
+    <string name="error_peer_auth_failed">Błąd przy weryfikacji serwer</string>
+    <string name="error_unreachable">Serwer jest nieosiągalna</string>
+    <string msgid="2427401033573778270" name="expand_button_title">"Zaawansowane"</string>
+    <string name="exposed_dropdown_menu_content_description">Pokaż menu</string>
+    <string name="icon_content_description">Ikona okna</string>
+    <string name="imc_state_block">Failed</string>
+    <string name="imc_state_isolate">Restricted</string>
+    <string name="imc_state_label">Assessment:</string>
+    <string name="import_certificate">Import certificate</string>
+    <string name="item_view_role_description">Karta</string>
+    <string name="loading">Wczytywanie…</string>
+    <string name="local_tab">Imported</string>
+    <string name="log_mail_subject">strongSwan %1$s Log</string>
+    <string name="log_title">Log</string>
+    <string name="login_confirm">Połącz</string>
+    <string name="login_password">Hasło</string>
+    <string name="login_title">Wprowadż hasło</string>
+    <string name="login_username">Użytkownik</string>
+    <string name="m3_loading_indicator_content_description">Wczytuję</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="managed_config_allow_certificate_import_description">Specifies whether users are allowed to import certificates</string>
+    <string name="managed_config_allow_certificate_import_title">Allow certificate import</string>
+    <string name="managed_config_allow_existing_profiles_description">Specifies whether users can continue to see and use their previously created profiles</string>
+    <string name="managed_config_allow_existing_profiles_title">Show existing profiles</string>
+    <string name="managed_config_allow_profile_creation_description">Specifies whether users are allowed to add their own profiles</string>
+    <string name="managed_config_allow_profile_creation_title">Allow profile creation</string>
+    <string name="managed_config_allow_profile_import_description">Specifies whether users are allowed to import their own profiles</string>
+    <string name="managed_config_allow_profile_import_title">Allow profile import</string>
+    <string name="managed_config_allow_settings_access_description">Specifies whether users are allowed change global app settings</string>
+    <string name="managed_config_allow_settings_access_title">Allow modifying settings</string>
+    <string name="managed_config_default_vpn_profile_description">Unique identifier of the VPN profile to use by default, use the value \"mru\" for the most recently used profile</string>
+    <string name="managed_config_default_vpn_profile_title">@string/pref_default_vpn_profile</string>
+    <string name="managed_config_dns_server_host_names_description">@string/profile_dns_servers_hint</string>
+    <string name="managed_config_dns_server_host_names_title">@string/profile_dns_servers_label</string>
+    <string name="managed_config_esp_proposal_description">@string/profile_proposals_esp_hint</string>
+    <string name="managed_config_esp_proposal_title">@string/profile_proposals_esp_label</string>
+    <string name="managed_config_excluded_package_names_description">Space-separated list of package names of apps excluded from using the VPN; only used of allow list is empty</string>
+    <string name="managed_config_excluded_package_names_title">Apps excluded from using the VPN (Optional)</string>
+    <string name="managed_config_ignore_battery_optimizations_description">@string/pref_power_whitelist_summary</string>
+    <string name="managed_config_ignore_battery_optimizations_title">@string/pref_power_whitelist_title</string>
+    <string name="managed_config_ike_proposal_description">@string/profile_proposals_ike_hint</string>
+    <string name="managed_config_ike_proposal_title">@string/profile_proposals_ike_label</string>
+    <string name="managed_config_included_package_names_description">Space-separated list of package names; all other apps will not see/use the VPN</string>
+    <string name="managed_config_included_package_names_title">Apps allowed to use the VPN (Optional)</string>
+    <string name="managed_config_ipv6_transport_description">@string/profile_ipv6_transport_hint</string>
+    <string name="managed_config_ipv6_transport_title">@string/profile_ipv6_transport_label</string>
+    <string name="managed_config_local_bundle_description">Specifies information about the client</string>
+    <string name="managed_config_local_bundle_title">Local</string>
+    <string name="managed_config_local_eap_id_description">If this is required (for username/password-based EAP authentication) but not configured here, the user is prompted for it. If it is set, the user is not able to change it. In both cases the user may optionally enter the password</string>
+    <string name="managed_config_local_eap_id_title">Identity/username for EAP authentication (Optional)</string>
+    <string name="managed_config_local_eap_password_description">If this is required (for username/password-based EAP authentication) but not configured here, the user is prompted for it and may store it locally</string>
+    <string name="managed_config_local_eap_password_title">Password for EAP authentication (Optional)</string>
+    <string name="managed_config_local_id_description">@string/profile_local_id_hint_user</string>
+    <string name="managed_config_local_id_title">@string/profile_local_id_label</string>
+    <string name="managed_config_local_p12_description">Base64-encoded PKCS#12-container with the client certificate and private key and optional certificate chain (the latter might cause warnings on older Android releases, see Android VPN client configuration for details). Not necessary for username/password-based EAP authentication or if the user already has the certificate/key installed as it may be selected while importing the profile</string>
+    <string name="managed_config_local_p12_password_description">Password required to extract the private key of the PKCS#12-container for installation</string>
+    <string name="managed_config_local_p12_password_title">User certificate password (Optional)</string>
+    <string name="managed_config_local_p12_title">@string/profile_user_certificate_label</string>
+    <string name="managed_config_local_rsa_pss_description">@string/profile_rsa_pss_hint</string>
+    <string name="managed_config_local_rsa_pss_title">@string/profile_rsa_pss_label</string>
+    <string name="managed_config_local_user_certificate_alias_description">Alias of a user certificate/key already installed on the device. The app must be granted access to it by the MDM. Only used if no certificate is distributed with the config. If a certificate is required and this is not set, the user may select a local certificate manually</string>
+    <string name="managed_config_local_user_certificate_alias_title">User certificate alias (Optional)</string>
+    <string name="managed_config_mtu_description">@string/profile_mtu_hint</string>
+    <string name="managed_config_mtu_title">@string/profile_mtu_label</string>
+    <string name="managed_config_name_description">@string/profile_name_hint</string>
+    <string name="managed_config_name_title">@string/profile_name_label_simple</string>
+    <string name="managed_config_nat_keepalive_description">@string/profile_nat_keepalive_hint</string>
+    <string name="managed_config_nat_keepalive_title">@string/profile_nat_keepalive_label</string>
+    <string name="managed_config_profile_bundle_description">A managed VPN profile</string>
+    <string name="managed_config_profile_bundle_title">VPN profile</string>
+    <string name="managed_config_profiles_array_description">Collection of managed VPN profiles</string>
+    <string name="managed_config_profiles_array_title">VPN profiles</string>
+    <string name="managed_config_proxy_exclusions_description">@string/profile_proxy_exclusions_hint</string>
+    <string name="managed_config_proxy_exclusions_title">@string/profile_proxy_exclusions_label</string>
+    <string name="managed_config_proxy_host_description">@string/profile_proxy_host_hint</string>
+    <string name="managed_config_proxy_host_title">@string/profile_proxy_host_label</string>
+    <string name="managed_config_proxy_port_description">@string/profile_proxy_port_hint</string>
+    <string name="managed_config_proxy_port_title">@string/profile_proxy_port_label</string>
+    <string name="managed_config_proxy_server_bundle_description">@string/profile_proxy_server_intro</string>
+    <string name="managed_config_proxy_server_bundle_title">@string/profile_proxy_server_label</string>
+    <string name="managed_config_remote_addr_description">@string/profile_gateway_hint</string>
+    <string name="managed_config_remote_addr_title">@string/profile_gateway_label</string>
+    <string name="managed_config_remote_bundle_description">Specifies information about the server</string>
+    <string name="managed_config_remote_bundle_title">Remote</string>
+    <string name="managed_config_remote_cert_description">Base64-encoded CA or server certificate. Is imported into the app, not the system keystore. If not set, automatic CA certificate selection is enabled</string>
+    <string name="managed_config_remote_cert_title">CA or server certificate (Optional)</string>
+    <string name="managed_config_remote_certreq_description">Specifies whether to send certificate requests for all installed or selected CA certificates. Disabling this may reduce the size of the IKE_AUTH message if the server does not support fragmentation. But it only works if the server doesn\'t require certificate requests to send back the server certificate</string>
+    <string name="managed_config_remote_certreq_title">Send certificate requests</string>
+    <string name="managed_config_remote_id_description">@string/profile_remote_id_hint</string>
+    <string name="managed_config_remote_id_title">@string/profile_remote_id_label</string>
+    <string name="managed_config_remote_port_description">@string/profile_port_hint</string>
+    <string name="managed_config_remote_port_title">@string/profile_port_label</string>
+    <string name="managed_config_remote_revocation_crl_description">@string/profile_use_crl_hint</string>
+    <string name="managed_config_remote_revocation_crl_title">@string/profile_use_crl_label</string>
+    <string name="managed_config_remote_revocation_ocsp_description">@string/profile_use_ocsp_hint</string>
+    <string name="managed_config_remote_revocation_ocsp_title">@string/profile_use_ocsp_label</string>
+    <string name="managed_config_remote_revocation_strict_description">@string/profile_strict_revocation_hint</string>
+    <string name="managed_config_remote_revocation_strict_title">@string/profile_strict_revocation_label</string>
+    <string name="managed_config_split_tunneling_block_ipv4_description">Specifies whether to block IPv4 traffic that\'s not destined for the VPN. Forces all IPv4 traffic via VPN (traffic that does not match the negotiated traffic selector is then just dropped). Thus this is basically equivalent to including 0.0.0.0/0 in subnets</string>
+    <string name="managed_config_split_tunneling_block_ipv4_title">@string/profile_split_tunnelingv4_title</string>
+    <string name="managed_config_split_tunneling_block_ipv6_description">Specifies whether to block IPv6 traffic that\'s not destined for the VPN. Forces all IPv6 traffic via VPN (traffic that does not match the negotiated traffic selector is then just dropped). Thus this is basically equivalent to including ::/0 in subnets</string>
+    <string name="managed_config_split_tunneling_block_ipv6_title">@string/profile_split_tunnelingv6_title</string>
+    <string name="managed_config_split_tunneling_bundle_description">@string/profile_split_tunneling_intro</string>
+    <string name="managed_config_split_tunneling_bundle_title">@string/profile_split_tunneling_label</string>
+    <string name="managed_config_split_tunneling_excluded_description">@string/profile_excluded_subnets_hint</string>
+    <string name="managed_config_split_tunneling_excluded_title">@string/profile_excluded_subnets_label</string>
+    <string name="managed_config_split_tunneling_subnets_description">@string/profile_included_subnets_hint</string>
+    <string name="managed_config_split_tunneling_subnets_title">@string/profile_included_subnets_label</string>
+    <string name="managed_config_uuid_description">Unique identifier of the VPN profile. Version 4 UUIDs (random-generated) are recommended</string>
+    <string name="managed_config_uuid_title">Unique identifier</string>
+    <string name="managed_config_vpn_type_description">The type of client authentication used by the VPN profile</string>
+    <string name="managed_config_vpn_type_title">@string/profile_vpn_type_label</string>
+    <string name="material_clock_toggle_content_description">Wybierz: przed południem czy po południu</string>
+    <string name="material_hour_24h_suffix">%1$s godz.</string>
+    <string name="material_hour_selection">Wybierz godzinę</string>
+    <string name="material_hour_suffix">%1$s</string>
+    <string name="material_minute_selection">Wybierz minuty</string>
+    <string name="material_minute_suffix">%1$s minut</string>
+    <string name="material_slider_range_end">Koniec zakresu</string>
+    <string name="material_slider_range_start">Początek zakresu</string>
+    <string name="material_slider_value">Wartość</string>
+    <string name="material_timepicker_am">AM</string>
+    <string name="material_timepicker_clock_mode_description">Aby wprowadzić czas, włącz tryb zegara.</string>
+    <string name="material_timepicker_hour">Godzina</string>
+    <string name="material_timepicker_minute">Minuta</string>
+    <string name="material_timepicker_pm">PM</string>
+    <string name="material_timepicker_select_time">Określ czas</string>
+    <string name="material_timepicker_text_input_mode_description">Aby wprowadzić czas, włącz tryb wprowadzania tekstu.</string>
+    <string name="mtrl_badge_numberless_content_description">Nowe powiadomienie</string>
+    <string name="mtrl_checkbox_state_description_checked">Zaznaczono</string>
+    <string name="mtrl_checkbox_state_description_indeterminate">Częściowo zaznaczono</string>
+    <string name="mtrl_checkbox_state_description_unchecked">Nie zaznaczono</string>
+    <string name="mtrl_chip_close_icon_content_description">Usuń: (%1$s)</string>
+    <string name="mtrl_exceed_max_badge_number_content_description" ns1:ignore="PluralsCandidate">Liczba nowych powiadomień przekracza %1$d</string>
+    <string name="mtrl_picker_a11y_next_month">Zmień na następny miesiąc</string>
+    <string name="mtrl_picker_a11y_prev_month">Zmień na poprzedni miesiąc</string>
+    <string name="mtrl_picker_announce_current_range_selection">Wybrana data rozpoczęcia: %1$s – wybrana data zakończenia: %2$s</string>
+    <string name="mtrl_picker_announce_current_selection">Bieżący wybór: %1$s</string>
+    <string name="mtrl_picker_announce_current_selection_none">brak</string>
+    <string name="mtrl_picker_cancel">Anuluj</string>
+    <string name="mtrl_picker_confirm">OK</string>
+    <string name="mtrl_picker_date_header_selected">%1$s</string>
+    <string name="mtrl_picker_date_header_title">Wybierz datę</string>
+    <string name="mtrl_picker_date_header_unselected">Wybrana data</string>
+    <string name="mtrl_picker_day_of_week_column_header">%1$s</string>
+    <string name="mtrl_picker_end_date_description">Data zakończenia %1$s</string>
+    <string name="mtrl_picker_invalid_format">Nieprawidłowy format.</string>
+    <string name="mtrl_picker_invalid_format_example">Przykład: %1$s</string>
+    <string name="mtrl_picker_invalid_format_use">Użyj formatu: %1$s</string>
+    <string name="mtrl_picker_invalid_range">Nieprawidłowy zakres.</string>
+    <string name="mtrl_picker_navigate_to_current_year_description">Przejdź do bieżącego roku %1$d</string>
+    <string name="mtrl_picker_navigate_to_year_description">Przejdź do roku %1$d</string>
+    <string name="mtrl_picker_out_of_range">Poza zakresem: %1$s</string>
+    <string name="mtrl_picker_range_header_only_end_selected">Data rozpoczęcia – %1$s</string>
+    <string name="mtrl_picker_range_header_only_start_selected">%1$s – data zakończenia</string>
+    <string name="mtrl_picker_range_header_selected">%1$s–%2$s</string>
+    <string name="mtrl_picker_range_header_title">Wybierz zakres</string>
+    <string name="mtrl_picker_range_header_unselected">Data rozpoczęcia – data zakończenia</string>
+    <string name="mtrl_picker_save">Zapisz</string>
+    <string name="mtrl_picker_start_date_description">Data rozpoczęcia %1$s</string>
+    <string name="mtrl_picker_text_input_date_hint">Data</string>
+    <string name="mtrl_picker_text_input_date_range_end_hint">Data zakończenia</string>
+    <string name="mtrl_picker_text_input_date_range_start_hint">Data rozpoczęcia</string>
+    <string name="mtrl_picker_text_input_day_abbr">d</string>
+    <string name="mtrl_picker_text_input_month_abbr">m</string>
+    <string name="mtrl_picker_text_input_year_abbr">r</string>
+    <string name="mtrl_picker_today_description">Dzisiaj %1$s</string>
+    <string name="mtrl_picker_toggle_to_calendar_input_mode">Włącz kalendarzowy tryb wprowadzania</string>
+    <string name="mtrl_picker_toggle_to_day_selection">Przełącz na widok kalendarza</string>
+    <string name="mtrl_picker_toggle_to_text_input_mode">Włącz tekstowy tryb wprowadzania</string>
+    <string name="mtrl_picker_toggle_to_year_selection">Przełącz na widok roku</string>
+    <string name="mtrl_picker_toggled_to_day_selection">Przełączono na widok Kalendarza</string>
+    <string name="mtrl_picker_toggled_to_year_selection">Przełączono na widok roku</string>
+    <string name="mtrl_timepicker_cancel">Anuluj</string>
+    <string name="mtrl_timepicker_confirm">OK</string>
+    <string name="no_certificates">Brak certyfikatów</string>
+    <string name="no_profile_selected">Nie wybrano profilu</string>
+    <string name="no_profiles">Brak profilu VPN</string>
+    <string msgid="6573031135582639649" name="not_set">"Nie ustawiono"</string>
+    <string name="one_profile_selected">Wybrano jeden profil</string>
+    <string name="password_toggle_content_description">Pokaż hasło</string>
+    <string name="permanent_notification_description">Provides information about the VPN connection state and serves as permanent notification to keep the VPN service running in the background.</string>
+    <string name="permanent_notification_name">VPN connection state</string>
+    <string name="power_whitelist_text">Please confirm the next dialog to add the app to the device\'s power whitelist so it can ignore battery optimizations and schedule NAT keep-alives and rekeyings accurately in order to constantly keep reachable while the VPN is established.</string>
+    <string name="power_whitelist_title">Disable battery optimizations</string>
+    <string name="pref_default_vpn_profile">Default VPN profile</string>
+    <string name="pref_default_vpn_profile_mru">Connect to most recently used profile</string>
+    <string name="pref_power_whitelist_summary">Don\'t show a warning if the app is not on the device\'s power whitelist</string>
+    <string name="pref_power_whitelist_title">Ignore battery optimizations</string>
+    <string name="pref_title">Settings</string>
+    <string msgid="6685851473431805375" name="preference_copied">"Skopiowano „<ns2:g id="SUMMARY">%1$s</ns2:g>” do schowka."</string>
+    <string name="profile_advanced_label">Advanced settings</string>
+    <string name="profile_ca_auto_label">Wybierz automatycznie</string>
+    <string name="profile_ca_label">Certyfikat CA</string>
+    <string name="profile_ca_select_certificate">Wybierz określony certyfikat CA</string>
+    <string name="profile_ca_select_certificate_label">Wybierz certyfikat CA</string>
+    <string name="profile_cert_alias">Certificate for \"%1$s\"</string>
+    <string name="profile_cert_import">Import certificate from VPN profile</string>
+    <string name="profile_cert_req_hint">Certificate requests are sent for all available or selected CA certificates. To reduce the size of the IKE_AUTH message this can be disabled. However, this only works if the server sends its certificate even if it didn\'t receive any certificate requests.</string>
+    <string name="profile_cert_req_label">Send certificate requests</string>
+    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
+    <string name="profile_dns_servers_label">DNS servers</string>
+    <string name="profile_edit_cancel">Anuluj</string>
+    <string name="profile_edit_import">Import</string>
+    <string name="profile_edit_save">Zapisz</string>
+    <string name="profile_excluded_subnets_hint">Traffic to these subnets will not be routed via VPN, but as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
+    <string name="profile_excluded_subnets_label">Excluded subnets</string>
+    <string name="profile_gateway_hint">IP address or hostname of the VPN server</string>
+    <string name="profile_gateway_label">Serwer</string>
+    <string name="profile_import">Import VPN profile</string>
+    <string name="profile_import_exists">This VPN profile already exists, its current settings will be replaced.</string>
+    <string name="profile_import_failed">Failed to import VPN profile</string>
+    <string name="profile_import_failed_detail">Failed to import VPN profile: %1$s</string>
+    <string name="profile_import_failed_host">Host unknown</string>
+    <string name="profile_import_failed_not_found">File not found</string>
+    <string name="profile_import_failed_tls">TLS handshake failed</string>
+    <string name="profile_import_failed_value">Invalid value in \"%1$s\"</string>
+    <string name="profile_import_shared_secret">This file contains a cleartext password. Remember to delete it after importing.</string>
+    <string name="profile_included_subnets_hint">Only route traffic to specific subnets via VPN, everything else is routed as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
+    <string name="profile_included_subnets_label">Custom subnets</string>
+    <string name="profile_ipv6_transport_hint">Use IPv6 for outer transport addresses if available. Can only be enabled if UDP encapsulation for IPv6 is supported by the server. Note that the Linux kernel only supports this since version 5.8, so many servers will not support it yet.</string>
+    <string name="profile_ipv6_transport_label">Use IPv6 transport addresses</string>
+    <string name="profile_label">Profil:</string>
+    <string name="profile_local_id_hint_cert">Defaults to the certificate\'s subject identity. Custom values may be used if expected/required by the server. Note that these usually must be confirmed by the certificate (auto-completion is provided for the certificate\'s alternative identities, if any)</string>
+    <string name="profile_local_id_hint_user">Defaults to the configured username. Custom values may be used if expected/required by the server</string>
+    <string name="profile_local_id_label">Client identity</string>
+    <string name="profile_managed">Managed profile</string>
+    <string name="profile_mtu_hint">In case the default value is unsuitable for a particular network</string>
+    <string name="profile_mtu_label">MTU of the VPN tunnel device</string>
+    <string name="profile_name_hint">Defaults to the configured server</string>
+    <string name="profile_name_hint_gateway">Defaults to \"%1$s\"</string>
+    <string name="profile_name_label">Nazwa profilu (opcjonalny)</string>
+    <string name="profile_name_label_simple">Nazwa profilu</string>
+    <string name="profile_nat_keepalive_hint">Small packets are sent to keep mappings on NAT routers alive if there is no other traffic. In order to save energy the default interval is 45 seconds. Behind NAT routers that remove mappings early this might be too high, try 20 seconds or less in that case.</string>
+    <string name="profile_nat_keepalive_label">NAT-T keepalive interval</string>
+    <string name="profile_not_found">Nie znaleziono profilu</string>
+    <string name="profile_password_hint">Leave blank to get prompted on demand</string>
+    <string name="profile_password_label">Hasło (opcjonalny)</string>
+    <string name="profile_port_hint">UDP port to connect to, if different from the default</string>
+    <string name="profile_port_label">Server port</string>
+    <string name="profile_profile_id">Profile ID</string>
+    <string name="profile_proposals_esp_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm is required, a Diffie-Hellman group is optional (e.g. aes256-sha256 or aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted (e.g. aes256gcm16 or aes256gcm16-ecp256). If a DH group is specified IPsec SA rekeying will use a DH key exchange. However, DH groups specified here are not used when the connection is established initially because the keys there are derived from the IKE SA key material. Therefore, any configuration mismatch with the server will only cause errors later during rekeying.</string>
+    <string name="profile_proposals_esp_label">IPsec/ESP Algorithms</string>
+    <string name="profile_proposals_ike_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm, a pseudo random function (optional, defaults to one based on the integrity algorithm) and a Diffie-Hellman group are required (e.g. aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted but a PRF is required (e.g. aes256gcm16-prfsha256-ecp256).</string>
+    <string name="profile_proposals_ike_label">IKEv2 Algorithms</string>
+    <string name="profile_proposals_intro">Optionally configure specific algorithms to use for IKEv2 and/or IPsec/ESP instead of the defaults. Refer to our wiki for a <a href="https://docs.strongswan.org/docs/latest/config/IKEv2CipherSuites.html">list of algorithm identifiers</a> (note that not all are supported by this app). Both fields take a list of algorithms, each separated by a hyphen.</string>
+    <string name="profile_proposals_label">Algorithms</string>
+    <string name="profile_proxy_exclusions_hint">Optional list of hosts for which the HTTP proxy server is not used (separated by spaces, and wildcards are possible, e.g. \"direct.example.net *.example.com\")</string>
+    <string name="profile_proxy_exclusions_label">Proxy exclusion list</string>
+    <string name="profile_proxy_host_hint">IP address or hostname of the HTTP proxy server to use when connected to the VPN</string>
+    <string name="profile_proxy_host_label">Proxy host</string>
+    <string name="profile_proxy_port_hint">Port to access the HTTP proxy server, defaults to 8080</string>
+    <string name="profile_proxy_port_label">Proxy port</string>
+    <string name="profile_proxy_server_intro">Optional HTTP proxy server to use when connected to the VPN. This is only a recommendation and may be ignored by apps. Note that apps using the proxy will access all HTTP resources through it regardless of the destination, so split-tunneling settings might not have any effect. To avoid using the proxy server for specific hosts, use the exclusion list below.</string>
+    <string name="profile_proxy_server_label">HTTP proxy server</string>
+    <string name="profile_remote_id_hint">Defaults to the configured server. Custom values are explicitly sent to the server and enforced during authentication</string>
+    <string name="profile_remote_id_hint_gateway">Defaults to \"%1$s\". Custom values are explicitly sent to the server and enforced during authentication</string>
+    <string name="profile_remote_id_label">Server identity</string>
+    <string name="profile_rsa_pss_hint">Use the stronger PSS encoding instead of the classic PKCS#1 encoding for RSA signatures. Authentication will fail if the server does not support such signatures.</string>
+    <string name="profile_rsa_pss_label">Use RSA/PSS signatures</string>
+    <string name="profile_select_apps">Select applications</string>
+    <string name="profile_select_apps_label">Applications</string>
+    <string name="profile_select_no_apps">No applications selected</string>
+    <string name="profile_select_one_app">One application selected</string>
+    <string name="profile_select_x_apps">%1$d applications selected</string>
+    <string name="profile_show_advanced_label">Show advanced settings</string>
+    <string name="profile_split_tunneling_intro">By default, the client will route all network traffic through the VPN, unless the server narrows the subnets when the connection is established, in which case only traffic the server allows will be routed via VPN (by default, all other traffic is routed as if there was no VPN).</string>
+    <string name="profile_split_tunneling_label">Split tunneling</string>
+    <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
+    <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
+    <string name="profile_strict_revocation_hint">In strict mode the authentication will fail not only if the server certificate has been revoked but also if its status is unknown (e.g. because OCSP failed and no valid CRL was available).</string>
+    <string name="profile_strict_revocation_label">Use strict revocation checking</string>
+    <string name="profile_use_crl_hint">Use Certificate Revocation Lists (CRL), if available, to check that the server certificate has not been revoked. CRLs are only used if OCSP doesn\'t yield a result.</string>
+    <string name="profile_use_crl_label">Use CRLs to check certificate</string>
+    <string name="profile_use_ocsp_hint">Use the Online Certificate Status Protocol (OCSP), if available, to check that the server certificate has not been revoked.</string>
+    <string name="profile_use_ocsp_label">Use OCSP to check certificate</string>
+    <string name="profile_user_certificate_install">Install user certificate</string>
+    <string name="profile_user_certificate_label">Certyfikat użytkownika</string>
+    <string name="profile_user_select_certificate">>Wybierz określony certyfikat użytkownika</string>
+    <string name="profile_user_select_certificate_label">Wybierz certyfikat użytkownika</string>
+    <string name="profile_username_label">Użytkownik</string>
+    <string name="profile_vpn_type_label">Typ VPN</string>
+    <string name="profiles_deleted">Wybrane profile usunięte</string>
+    <string name="reconnect">Połączyć ponownie</string>
+    <string name="reload_trusted_certs">Przeładuj certyfikaty CA</string>
+    <string name="remediation_instructions_title">Remediation instructions</string>
+    <string name="replaces_active_connection">To zastąpi aktywne połączenie VPN!</string>
+    <string name="retry">Retry</string>
+    <string name="search">Szukaj</string>
+    <string msgid="6264217191555673260" name="search_menu_title">"Szukaj"</string>
+    <string name="searchview_clear_text_content_description">Wyczyść tekst</string>
+    <string name="searchview_navigation_content_description">Wstecz</string>
+    <string name="select_profiles">Wybierz profile</string>
+    <string name="send_log">Prześlij log</string>
+    <string name="show_log">Pokaż log</string>
+    <string name="show_remediation_instructions">View remediation instructions</string>
+    <string name="side_sheet_accessibility_pane_title">Arkusz boczny</string>
+    <string name="state_connected">Połączony</string>
+    <string name="state_connecting">Łączenie…</string>
+    <string name="state_disabled">Brak aktywnego VPN</string>
+    <string name="state_disconnecting">Przerywam połączenie…</string>
+    <string name="state_error">Błąd</string>
+    <string name="state_label">Status:</string>
+    <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
+    <string name="strongswan_shortcut">Skrót strongSwan</string>
+    <string msgid="9167775378838880170" name="summary_collapsed_preference_list">"<ns2:g id="CURRENT_ITEMS">%1$s</ns2:g>, <ns2:g id="ADDED_ITEMS">%2$s</ns2:g>"</string>
+    <string name="system_tab">System</string>
+    <string name="tile_connect">Connect VPN</string>
+    <string name="tile_default">Toggle VPN</string>
+    <string name="tile_disconnect">Disconnect VPN</string>
+    <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) allows server operators to assess the health of a client device.</p><p>For that purpose the server operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.</p><b>Any data will be sent only after verifying the server\'s identity.</b>]]></string>
+    <string name="tnc_notice_subtitle">Device data is sent to the server operator</string>
+    <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
+    <string name="trusted_certs_title">Certyfikaty CA</string>
+    <string name="user_tab">Użytkownik</string>
+    <string msgid="3140233346420563315" name="v7_preference_off">"WYŁ."</string>
+    <string msgid="89551595707643515" name="v7_preference_on">"WŁ."</string>
+    <string name="vpn_connected">Połączenie z VPN</string>
+    <string name="vpn_not_supported">Urządzenie nie obsługuje aplikacji VPN.\nProszę skontaktować się z producentem.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN connections are not supported if a built-in VPN has the always-on feature enabled.</string>
+    <string name="vpn_not_supported_no_permission">Unable to get permission to create VPN connections. Either because it was denied by the user, or because a different VPN app has the always-on feature enabled.</string>
+    <string name="vpn_not_supported_title">Nie obsługiwany VPN</string>
+    <string name="vpn_profile_connected">Ten profil VPN jest obecnie połaczony!</string>
+    <string name="x_profiles_selected">Wzbrano %1$d profile</string>
+</resources>

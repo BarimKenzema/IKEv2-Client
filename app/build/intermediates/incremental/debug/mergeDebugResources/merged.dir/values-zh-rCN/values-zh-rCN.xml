@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" xmlns:ns2="http://schemas.android.com/tools">
+    <string-array name="apps_handling">
+        <item>所有应用程序都使用VPN</item>
+        <item>从VPN中排除选定的应用程序</item>
+        <item>只有选定的应用程序使用VPN</item>
+    </string-array>
+    <string-array name="vpn_types">
+        <item>IKEv2 EAP (用户名/密码)</item>
+        <item>IKEv2 证书</item>
+        <item>IKEv2 证书 + EAP (用户名/密码)</item>
+        <item>IKEv2 EAP-TLS (证书)</item>
+        <item>IKEv2 EAP-TNC (用户名/密码)</item>
+    </string-array>
+    <plurals name="clear_crl_cache_msg">
+        <item quantity="one">CRL缓存包含 %1$d 个文件 (%2$s).</item>
+        <item quantity="other">CRL缓存包含 %1$d 个文件 (%2$s).</item>
+    </plurals>
+    <plurals name="mtrl_badge_content_description">
+    <item quantity="one">%d 条新通知</item>
+    <item quantity="other">%d 条新通知</item>
+  </plurals>
+    <plurals name="retry_in">
+        <item quantity="one">%1$d s后重试</item>
+        <item quantity="other">%1$d s后重试</item>
+    </plurals>
+    <string msgid="5976598919945601918" name="abc_action_bar_home_description">"转到首页"</string>
+    <string msgid="8388173803310557296" name="abc_action_bar_up_description">"转到上一层级"</string>
+    <string msgid="3937310113216875497" name="abc_action_menu_overflow_description">"更多选项"</string>
+    <string msgid="4692188335987374352" name="abc_action_mode_done">"完成"</string>
+    <string msgid="1189761859438369441" name="abc_activity_chooser_view_see_all">"查看全部"</string>
+    <string msgid="2165779757652331008" name="abc_activitychooserview_choose_application">"选择应用"</string>
+    <string msgid="4215997306490295099" name="abc_capital_off">"关闭"</string>
+    <string msgid="884982626291842264" name="abc_capital_on">"开启"</string>
+    <string msgid="8833365367933412986" name="abc_menu_alt_shortcut_label">"Alt+"</string>
+    <string msgid="2223301931652355242" name="abc_menu_ctrl_shortcut_label">"Ctrl+"</string>
+    <string msgid="838001238306846836" name="abc_menu_delete_shortcut_label">"Delete 键"</string>
+    <string msgid="7986526966204849475" name="abc_menu_enter_shortcut_label">"Enter 键"</string>
+    <string msgid="375214403600139847" name="abc_menu_function_shortcut_label">"Fn+"</string>
+    <string msgid="4192209724446364286" name="abc_menu_meta_shortcut_label">"Meta+"</string>
+    <string msgid="4741552369836443843" name="abc_menu_shift_shortcut_label">"Shift+"</string>
+    <string msgid="5473865519181928982" name="abc_menu_space_shortcut_label">"空格键"</string>
+    <string msgid="6180552449598693998" name="abc_menu_sym_shortcut_label">"Sym+"</string>
+    <string msgid="5520303668377388990" name="abc_prepend_shortcut_label">"Menu+"</string>
+    <string msgid="7208076849092622260" name="abc_search_hint">"搜索…"</string>
+    <string msgid="3741173234950517107" name="abc_searchview_description_clear">"清除查询"</string>
+    <string msgid="693312494995508443" name="abc_searchview_description_query">"搜索查询"</string>
+    <string msgid="3417662926640357176" name="abc_searchview_description_search">"搜索"</string>
+    <string msgid="1486535517437947103" name="abc_searchview_description_submit">"提交查询"</string>
+    <string msgid="2293578557972875415" name="abc_searchview_description_voice">"语音搜索"</string>
+    <string msgid="8875138169939072951" name="abc_shareactionprovider_share_with">"分享对象"</string>
+    <string msgid="9055268688411532828" name="abc_shareactionprovider_share_with_application">"与<ns1:g id="APPLICATION_NAME">%s</ns1:g>分享"</string>
+    <string msgid="1656852541809559762" name="abc_toolbar_collapse_description">"收起"</string>
+    <string name="add_profile">添加VPN配置</string>
+    <string name="alert_text_no_input_gateway">必填信息以初始化连接</string>
+    <string name="alert_text_no_input_username">请输入您的用户名</string>
+    <string name="alert_text_no_ips">请输入有效的IP地址，以空格分隔</string>
+    <string name="alert_text_no_proposal">请输入用连字符分隔的有效算法列表</string>
+    <string name="alert_text_no_subnets">请输入有效的子网和/或IP地址，用空格分隔</string>
+    <string name="alert_text_nocertfound">请选择一项或激活 <i>自动选择</i></string>
+    <string name="alert_text_nocertfound_title">未选择CA证书</string>
+    <string name="alert_text_out_of_range">请输入一个数字范围从%1$d到%2$d</string>
+    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password or user certificate</string>
+    <string name="app_name">strongSwan VPN 客户端</string>
+    <string name="bottomsheet_action_collapse">收起底部动作条</string>
+    <string name="bottomsheet_action_expand">展开底部动作条</string>
+    <string name="bottomsheet_action_expand_halfway">展开到一半高度</string>
+    <string name="bottomsheet_drag_handle_content_description">拖动手柄</string>
+    <string msgid="881409763997275156" name="call_notification_answer_action">"接听"</string>
+    <string msgid="8793775615905189152" name="call_notification_answer_video_action">"视频通话"</string>
+    <string msgid="3229508546291798546" name="call_notification_decline_action">"拒接"</string>
+    <string msgid="2659457946726154263" name="call_notification_hang_up_action">"挂断"</string>
+    <string msgid="6107532579223922871" name="call_notification_incoming_text">"来电"</string>
+    <string msgid="8623827134497363134" name="call_notification_ongoing_text">"正在通话"</string>
+    <string msgid="59049573811482460" name="call_notification_screening_text">"正在过滤来电"</string>
+    <string name="cancel_retry">取消重试</string>
+    <string name="cert_import_failed">证书导入失败</string>
+    <string name="cert_imported_successfully">证书已成功被导入</string>
+    <string name="certificate_required_text">Please edit the VPN profile to select one.</string>
+    <string name="certificate_required_title">User certificate required</string>
+    <string name="character_counter_content_description">输入了 %1$d 个字符（上限为 %2$d 个）</string>
+    <string name="character_counter_overflowed_content_description">超出字符数限制（共 %1$d 个，上限为 %2$d 个）</string>
+    <string name="clear">清理</string>
+    <string name="clear_crl_cache_msg_none">CRL缓存为空</string>
+    <string name="clear_crl_cache_title">清除CRL缓存？</string>
+    <string name="clear_text_end_icon_content_description">清除文字</string>
+    <string name="connect">连接</string>
+    <string name="connect_profile_question">是否连接%1$s？</string>
+    <string name="copied_name">%1$s (拷贝)</string>
+    <string msgid="6083905920877235314" name="copy">"复制"</string>
+    <string name="copy_profile">拷贝</string>
+    <string name="crl_cache">CRL缓存</string>
+    <string name="delete_certificate">证书将被永久移除！</string>
+    <string name="delete_certificate_question">是否删除证书？</string>
+    <string name="delete_profile">删除</string>
+    <string name="disconnect">断开链接</string>
+    <string name="disconnect_active_connection">这将断开活动VPN连接！</string>
+    <string name="disconnect_question">断开VPN连接？</string>
+    <string name="dismiss">不予考虑</string>
+    <string name="edit_profile">编辑</string>
+    <string name="empty_log">日志文件为空</string>
+    <string name="error_a11y_label">错误：无效</string>
+    <string name="error_assessment_failed">可靠性评估失败</string>
+    <string name="error_auth_failed">用户鉴权失败</string>
+    <string name="error_certificate_unavailable">客户端证书不可用</string>
+    <string name="error_format">无法建立VPN：%1$s。</string>
+    <string name="error_generic">连接中遭遇未知失败</string>
+    <string name="error_icon_content_description">错误</string>
+    <string name="error_lookup_failed">服务器地址查找失败</string>
+    <string name="error_password_missing">密码不可用</string>
+    <string name="error_peer_auth_failed">核验服务器鉴权失败</string>
+    <string name="error_unreachable">服务器地址无法连接</string>
+    <string msgid="2427401033573778270" name="expand_button_title">"高级"</string>
+    <string name="exposed_dropdown_menu_content_description">显示下拉菜单</string>
+    <string name="icon_content_description">对话框图标</string>
+    <string name="imc_state_block">失败的</string>
+    <string name="imc_state_isolate">受限的</string>
+    <string name="imc_state_label">评估详情：</string>
+    <string name="import_certificate">导入证书</string>
+    <string name="item_view_role_description">标签页</string>
+    <string name="loading">载入中…</string>
+    <string name="local_tab">已导入</string>
+    <string name="log_mail_subject">strongSwan %1$s 日志文件</string>
+    <string name="log_title">日志</string>
+    <string name="login_confirm">连接</string>
+    <string name="login_password">密码</string>
+    <string name="login_title">输入密码用于连接</string>
+    <string name="login_username">用户名</string>
+    <string name="m3_loading_indicator_content_description">正在加载</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="managed_config_allow_certificate_import_description">Specifies whether users are allowed to import certificates</string>
+    <string name="managed_config_allow_certificate_import_title">Allow certificate import</string>
+    <string name="managed_config_allow_existing_profiles_description">Specifies whether users can continue to see and use their previously created profiles</string>
+    <string name="managed_config_allow_existing_profiles_title">Show existing profiles</string>
+    <string name="managed_config_allow_profile_creation_description">Specifies whether users are allowed to add their own profiles</string>
+    <string name="managed_config_allow_profile_creation_title">Allow profile creation</string>
+    <string name="managed_config_allow_profile_import_description">Specifies whether users are allowed to import their own profiles</string>
+    <string name="managed_config_allow_profile_import_title">Allow profile import</string>
+    <string name="managed_config_allow_settings_access_description">Specifies whether users are allowed change global app settings</string>
+    <string name="managed_config_allow_settings_access_title">Allow modifying settings</string>
+    <string name="managed_config_default_vpn_profile_description">Unique identifier of the VPN profile to use by default, use the value \"mru\" for the most recently used profile</string>
+    <string name="managed_config_default_vpn_profile_title">@string/pref_default_vpn_profile</string>
+    <string name="managed_config_dns_server_host_names_description">@string/profile_dns_servers_hint</string>
+    <string name="managed_config_dns_server_host_names_title">@string/profile_dns_servers_label</string>
+    <string name="managed_config_esp_proposal_description">@string/profile_proposals_esp_hint</string>
+    <string name="managed_config_esp_proposal_title">@string/profile_proposals_esp_label</string>
+    <string name="managed_config_excluded_package_names_description">Space-separated list of package names of apps excluded from using the VPN; only used of allow list is empty</string>
+    <string name="managed_config_excluded_package_names_title">Apps excluded from using the VPN (Optional)</string>
+    <string name="managed_config_ignore_battery_optimizations_description">@string/pref_power_whitelist_summary</string>
+    <string name="managed_config_ignore_battery_optimizations_title">@string/pref_power_whitelist_title</string>
+    <string name="managed_config_ike_proposal_description">@string/profile_proposals_ike_hint</string>
+    <string name="managed_config_ike_proposal_title">@string/profile_proposals_ike_label</string>
+    <string name="managed_config_included_package_names_description">Space-separated list of package names; all other apps will not see/use the VPN</string>
+    <string name="managed_config_included_package_names_title">Apps allowed to use the VPN (Optional)</string>
+    <string name="managed_config_ipv6_transport_description">@string/profile_ipv6_transport_hint</string>
+    <string name="managed_config_ipv6_transport_title">@string/profile_ipv6_transport_label</string>
+    <string name="managed_config_local_bundle_description">Specifies information about the client</string>
+    <string name="managed_config_local_bundle_title">Local</string>
+    <string name="managed_config_local_eap_id_description">If this is required (for username/password-based EAP authentication) but not configured here, the user is prompted for it. If it is set, the user is not able to change it. In both cases the user may optionally enter the password</string>
+    <string name="managed_config_local_eap_id_title">Identity/username for EAP authentication (Optional)</string>
+    <string name="managed_config_local_eap_password_description">If this is required (for username/password-based EAP authentication) but not configured here, the user is prompted for it and may store it locally</string>
+    <string name="managed_config_local_eap_password_title">Password for EAP authentication (Optional)</string>
+    <string name="managed_config_local_id_description">@string/profile_local_id_hint_user</string>
+    <string name="managed_config_local_id_title">@string/profile_local_id_label</string>
+    <string name="managed_config_local_p12_description">Base64-encoded PKCS#12-container with the client certificate and private key and optional certificate chain (the latter might cause warnings on older Android releases, see Android VPN client configuration for details). Not necessary for username/password-based EAP authentication or if the user already has the certificate/key installed as it may be selected while importing the profile</string>
+    <string name="managed_config_local_p12_password_description">Password required to extract the private key of the PKCS#12-container for installation</string>
+    <string name="managed_config_local_p12_password_title">User certificate password (Optional)</string>
+    <string name="managed_config_local_p12_title">@string/profile_user_certificate_label</string>
+    <string name="managed_config_local_rsa_pss_description">@string/profile_rsa_pss_hint</string>
+    <string name="managed_config_local_rsa_pss_title">@string/profile_rsa_pss_label</string>
+    <string name="managed_config_local_user_certificate_alias_description">Alias of a user certificate/key already installed on the device. The app must be granted access to it by the MDM. Only used if no certificate is distributed with the config. If a certificate is required and this is not set, the user may select a local certificate manually</string>
+    <string name="managed_config_local_user_certificate_alias_title">User certificate alias (Optional)</string>
+    <string name="managed_config_mtu_description">@string/profile_mtu_hint</string>
+    <string name="managed_config_mtu_title">@string/profile_mtu_label</string>
+    <string name="managed_config_name_description">@string/profile_name_hint</string>
+    <string name="managed_config_name_title">@string/profile_name_label_simple</string>
+    <string name="managed_config_nat_keepalive_description">@string/profile_nat_keepalive_hint</string>
+    <string name="managed_config_nat_keepalive_title">@string/profile_nat_keepalive_label</string>
+    <string name="managed_config_profile_bundle_description">A managed VPN profile</string>
+    <string name="managed_config_profile_bundle_title">VPN profile</string>
+    <string name="managed_config_profiles_array_description">Collection of managed VPN profiles</string>
+    <string name="managed_config_profiles_array_title">VPN profiles</string>
+    <string name="managed_config_proxy_exclusions_description">@string/profile_proxy_exclusions_hint</string>
+    <string name="managed_config_proxy_exclusions_title">@string/profile_proxy_exclusions_label</string>
+    <string name="managed_config_proxy_host_description">@string/profile_proxy_host_hint</string>
+    <string name="managed_config_proxy_host_title">@string/profile_proxy_host_label</string>
+    <string name="managed_config_proxy_port_description">@string/profile_proxy_port_hint</string>
+    <string name="managed_config_proxy_port_title">@string/profile_proxy_port_label</string>
+    <string name="managed_config_proxy_server_bundle_description">@string/profile_proxy_server_intro</string>
+    <string name="managed_config_proxy_server_bundle_title">@string/profile_proxy_server_label</string>
+    <string name="managed_config_remote_addr_description">@string/profile_gateway_hint</string>
+    <string name="managed_config_remote_addr_title">@string/profile_gateway_label</string>
+    <string name="managed_config_remote_bundle_description">Specifies information about the server</string>
+    <string name="managed_config_remote_bundle_title">Remote</string>
+    <string name="managed_config_remote_cert_description">Base64-encoded CA or server certificate. Is imported into the app, not the system keystore. If not set, automatic CA certificate selection is enabled</string>
+    <string name="managed_config_remote_cert_title">CA or server certificate (Optional)</string>
+    <string name="managed_config_remote_certreq_description">Specifies whether to send certificate requests for all installed or selected CA certificates. Disabling this may reduce the size of the IKE_AUTH message if the server does not support fragmentation. But it only works if the server doesn\'t require certificate requests to send back the server certificate</string>
+    <string name="managed_config_remote_certreq_title">Send certificate requests</string>
+    <string name="managed_config_remote_id_description">@string/profile_remote_id_hint</string>
+    <string name="managed_config_remote_id_title">@string/profile_remote_id_label</string>
+    <string name="managed_config_remote_port_description">@string/profile_port_hint</string>
+    <string name="managed_config_remote_port_title">@string/profile_port_label</string>
+    <string name="managed_config_remote_revocation_crl_description">@string/profile_use_crl_hint</string>
+    <string name="managed_config_remote_revocation_crl_title">@string/profile_use_crl_label</string>
+    <string name="managed_config_remote_revocation_ocsp_description">@string/profile_use_ocsp_hint</string>
+    <string name="managed_config_remote_revocation_ocsp_title">@string/profile_use_ocsp_label</string>
+    <string name="managed_config_remote_revocation_strict_description">@string/profile_strict_revocation_hint</string>
+    <string name="managed_config_remote_revocation_strict_title">@string/profile_strict_revocation_label</string>
+    <string name="managed_config_split_tunneling_block_ipv4_description">Specifies whether to block IPv4 traffic that\'s not destined for the VPN. Forces all IPv4 traffic via VPN (traffic that does not match the negotiated traffic selector is then just dropped). Thus this is basically equivalent to including 0.0.0.0/0 in subnets</string>
+    <string name="managed_config_split_tunneling_block_ipv4_title">@string/profile_split_tunnelingv4_title</string>
+    <string name="managed_config_split_tunneling_block_ipv6_description">Specifies whether to block IPv6 traffic that\'s not destined for the VPN. Forces all IPv6 traffic via VPN (traffic that does not match the negotiated traffic selector is then just dropped). Thus this is basically equivalent to including ::/0 in subnets</string>
+    <string name="managed_config_split_tunneling_block_ipv6_title">@string/profile_split_tunnelingv6_title</string>
+    <string name="managed_config_split_tunneling_bundle_description">@string/profile_split_tunneling_intro</string>
+    <string name="managed_config_split_tunneling_bundle_title">@string/profile_split_tunneling_label</string>
+    <string name="managed_config_split_tunneling_excluded_description">@string/profile_excluded_subnets_hint</string>
+    <string name="managed_config_split_tunneling_excluded_title">@string/profile_excluded_subnets_label</string>
+    <string name="managed_config_split_tunneling_subnets_description">@string/profile_included_subnets_hint</string>
+    <string name="managed_config_split_tunneling_subnets_title">@string/profile_included_subnets_label</string>
+    <string name="managed_config_uuid_description">Unique identifier of the VPN profile. Version 4 UUIDs (random-generated) are recommended</string>
+    <string name="managed_config_uuid_title">Unique identifier</string>
+    <string name="managed_config_vpn_type_description">The type of client authentication used by the VPN profile</string>
+    <string name="managed_config_vpn_type_title">@string/profile_vpn_type_label</string>
+    <string name="material_clock_toggle_content_description">选择上午或下午</string>
+    <string name="material_hour_24h_suffix">%1$s 小时</string>
+    <string name="material_hour_selection">选择小时</string>
+    <string name="material_hour_suffix">%1$s 点</string>
+    <string name="material_minute_selection">选择分钟</string>
+    <string name="material_minute_suffix">%1$s 分</string>
+    <string name="material_slider_range_end">范围终点</string>
+    <string name="material_slider_range_start">范围起点</string>
+    <string name="material_slider_value">值</string>
+    <string name="material_timepicker_am">上午</string>
+    <string name="material_timepicker_clock_mode_description">切换到时钟模式来输入时间。</string>
+    <string name="material_timepicker_hour">小时</string>
+    <string name="material_timepicker_minute">分钟</string>
+    <string name="material_timepicker_pm">下午</string>
+    <string name="material_timepicker_select_time">选择时间</string>
+    <string name="material_timepicker_text_input_mode_description">切换到文字输入模式来输入时间。</string>
+    <string name="mtrl_badge_numberless_content_description">新通知</string>
+    <string name="mtrl_checkbox_state_description_checked">已选中</string>
+    <string name="mtrl_checkbox_state_description_indeterminate">部分选中</string>
+    <string name="mtrl_checkbox_state_description_unchecked">未选中</string>
+    <string name="mtrl_chip_close_icon_content_description">移除%1$s</string>
+    <string name="mtrl_exceed_max_badge_number_content_description" ns2:ignore="PluralsCandidate">有 %1$d 条以上的新通知</string>
+    <string name="mtrl_picker_a11y_next_month">转到下个月</string>
+    <string name="mtrl_picker_a11y_prev_month">转到上个月</string>
+    <string name="mtrl_picker_announce_current_range_selection">开始日期选择：%1$s – 结束日期选择：%2$s</string>
+    <string name="mtrl_picker_announce_current_selection">当前的选择是：%1$s</string>
+    <string name="mtrl_picker_announce_current_selection_none">无</string>
+    <string name="mtrl_picker_cancel">取消</string>
+    <string name="mtrl_picker_confirm">确定</string>
+    <string name="mtrl_picker_date_header_selected">%1$s</string>
+    <string name="mtrl_picker_date_header_title">请选择日期</string>
+    <string name="mtrl_picker_date_header_unselected">选定的日期</string>
+    <string name="mtrl_picker_day_of_week_column_header">%1$s</string>
+    <string name="mtrl_picker_end_date_description">结束日期 %1$s</string>
+    <string name="mtrl_picker_invalid_format">格式无效。</string>
+    <string name="mtrl_picker_invalid_format_example">示例：%1$s</string>
+    <string name="mtrl_picker_invalid_format_use">使用：%1$s</string>
+    <string name="mtrl_picker_invalid_range">范围无效。</string>
+    <string name="mtrl_picker_navigate_to_current_year_description">转到今年%1$d</string>
+    <string name="mtrl_picker_navigate_to_year_description">转到 %1$d 年</string>
+    <string name="mtrl_picker_out_of_range">不在允许的范围内：%1$s</string>
+    <string name="mtrl_picker_range_header_only_end_selected">开始日期 – %1$s</string>
+    <string name="mtrl_picker_range_header_only_start_selected">%1$s – 结束日期</string>
+    <string name="mtrl_picker_range_header_selected">%1$s - %2$s</string>
+    <string name="mtrl_picker_range_header_title">请选择范围</string>
+    <string name="mtrl_picker_range_header_unselected">开始日期 - 结束日期</string>
+    <string name="mtrl_picker_save">保存</string>
+    <string name="mtrl_picker_start_date_description">开始日期 %1$s</string>
+    <string name="mtrl_picker_text_input_date_hint">日期</string>
+    <string name="mtrl_picker_text_input_date_range_end_hint">结束日期</string>
+    <string name="mtrl_picker_text_input_date_range_start_hint">开始日期</string>
+    <string name="mtrl_picker_text_input_day_abbr">d</string>
+    <string name="mtrl_picker_text_input_month_abbr">m</string>
+    <string name="mtrl_picker_text_input_year_abbr">y</string>
+    <string name="mtrl_picker_today_description">今天%1$s</string>
+    <string name="mtrl_picker_toggle_to_calendar_input_mode">切换到日历输入模式</string>
+    <string name="mtrl_picker_toggle_to_day_selection">切换到日历视图</string>
+    <string name="mtrl_picker_toggle_to_text_input_mode">切换到文本字段输入模式</string>
+    <string name="mtrl_picker_toggle_to_year_selection">切换到年份视图</string>
+    <string name="mtrl_picker_toggled_to_day_selection">已切换到日历视图</string>
+    <string name="mtrl_picker_toggled_to_year_selection">已切换到年份视图</string>
+    <string name="mtrl_timepicker_cancel">取消</string>
+    <string name="mtrl_timepicker_confirm">确定</string>
+    <string name="no_certificates">无证书</string>
+    <string name="no_profile_selected">未选择配置</string>
+    <string name="no_profiles">无配置.</string>
+    <string msgid="6573031135582639649" name="not_set">"未设置"</string>
+    <string name="one_profile_selected">已选择1项配置</string>
+    <string name="password_toggle_content_description">显示密码</string>
+    <string name="permanent_notification_description">提供有关VPN连接状态的信息，并作为永久通知，使VPN服务在后台运行。</string>
+    <string name="permanent_notification_name">VPN连接状态</string>
+    <string name="power_whitelist_text">请确认下一个对话框，将应用程序添加到设备的电源白名单中，这样它就可以忽略电池优化，并准确地安排NAT保持有效和重新键入，以便在建立VPN时始终保持可访问性。</string>
+    <string name="power_whitelist_title">禁用电池优化</string>
+    <string name="pref_default_vpn_profile">默认VPN配置文件</string>
+    <string name="pref_default_vpn_profile_mru">连接到最近使用的配置文件</string>
+    <string name="pref_power_whitelist_summary">如果应用不在设备的电源白名单上，则不显示警告</string>
+    <string name="pref_power_whitelist_title">忽略电池优化</string>
+    <string name="pref_title">设置</string>
+    <string msgid="6685851473431805375" name="preference_copied">"已将“<ns1:g id="SUMMARY">%1$s</ns1:g>”复制到剪贴板。"</string>
+    <string name="profile_advanced_label">高级设置</string>
+    <string name="profile_ca_auto_label">自动选择</string>
+    <string name="profile_ca_label">CA证书</string>
+    <string name="profile_ca_select_certificate">选择一个指定的CA证书</string>
+    <string name="profile_ca_select_certificate_label">选择CA证书</string>
+    <string name="profile_cert_alias">\"%1$s\" 所对应的证书</string>
+    <string name="profile_cert_import">从VPN配置导入证书</string>
+    <string name="profile_cert_req_hint">为所有可用或选定的CA证书发送证书请求。要减小IKE_AUTH消息的大小，可以禁用此选项。但是，这仅在服务器发送其证书时有效，即使它没有收到任何证书请求。</string>
+    <string name="profile_cert_req_label">发送证书请求</string>
+    <string name="profile_dns_servers_hint">连接到VPN时要使用的自定义DNS服务器（用空格分隔，例如“8.8.8.8 2001:4860:4860:：888”），默认为从VPN服务器接收的DNS服务器</string>
+    <string name="profile_dns_servers_label">DNS服务器</string>
+    <string name="profile_edit_cancel">取消</string>
+    <string name="profile_edit_import">导入</string>
+    <string name="profile_edit_save">保存</string>
+    <string name="profile_excluded_subnets_hint">到这些子网的流量将不会通过VPN路由，但就好像没有VPN一样（用空格分隔，例如“192.168.1.0/24 2001:db8:：/64”）</string>
+    <string name="profile_excluded_subnets_label">排除子网</string>
+    <string name="profile_gateway_hint">IP地址或服务器域名</string>
+    <string name="profile_gateway_label">服务器地址</string>
+    <string name="profile_import">导入VPN配置</string>
+    <string name="profile_import_exists">此VPN配置已经存在，当前设定将被覆盖。</string>
+    <string name="profile_import_failed">导入VPN配置失败</string>
+    <string name="profile_import_failed_detail">导入VPN配置失败: %1$s</string>
+    <string name="profile_import_failed_host">未知主机</string>
+    <string name="profile_import_failed_not_found">文件未找到</string>
+    <string name="profile_import_failed_tls">TLS握手失败</string>
+    <string name="profile_import_failed_value">无效的值： \"%1$s\"</string>
+    <string name="profile_import_shared_secret">This file contains a cleartext password. Remember to delete it after importing.</string>
+    <string name="profile_included_subnets_hint">仅通过VPN将流量路由到特定子网，其他所有内容的路由如同没有VPN一样（用空格分隔，例如“192.168.1.0/24 2001:db8:：/64”）</string>
+    <string name="profile_included_subnets_label">自定义子网</string>
+    <string name="profile_ipv6_transport_hint">使用IPv6作为外部传输地址（如果可用）。仅当服务器支持IPv6的UDP封装时才能启用。请注意，Linux内核仅从5.8版开始支持此功能，因此许多服务器还不支持它。</string>
+    <string name="profile_ipv6_transport_label">使用IPv6传输地址</string>
+    <string name="profile_label">配置：</string>
+    <string name="profile_local_id_hint_cert">默认为证书的使用者标识。如果服务器期望/需要，可以使用自定义值。请注意，这些通常必须由证书确认（证书的替代身份（如果有）提供自动完成）</string>
+    <string name="profile_local_id_hint_user">默认为配置的用户名。如果服务器期望/需要，可以使用自定义值</string>
+    <string name="profile_local_id_label">客户身份</string>
+    <string name="profile_managed">Managed profile</string>
+    <string name="profile_mtu_hint">假如在某一网络下默认值不合适</string>
+    <string name="profile_mtu_label">VPN隧道设备的MTU值</string>
+    <string name="profile_name_hint">默认为已配置服务器地址</string>
+    <string name="profile_name_hint_gateway">默认为 \"%1$s\"</string>
+    <string name="profile_name_label">配置名称 (可选)</string>
+    <string name="profile_name_label_simple">配置名称</string>
+    <string name="profile_nat_keepalive_hint">如果没有其他流量，则发送小数据包以保持NAT路由器上的映射处于活动状态。为了节省能源，默认间隔为45秒。在早期删除映射的NAT路由器后面，这可能太高，在这种情况下，尝试20秒或更短时间。</string>
+    <string name="profile_nat_keepalive_label">NAT-T保持间隔</string>
+    <string name="profile_not_found">未找到配置</string>
+    <string name="profile_password_hint">留空则在要求时弹出</string>
+    <string name="profile_password_label">密码 (可选)</string>
+    <string name="profile_port_hint">如不同于默认值，则所需连接的UDP端口</string>
+    <string name="profile_port_label">服务器端口</string>
+    <string name="profile_profile_id">配置文件ID</string>
+    <string name="profile_proposals_esp_hint">对于非AEAD/经典加密算法，需要完整性算法，Diffie-Hellman组是可选的（例如aes256-sha256或aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法（例如aes256gcm16或aes256gcm16-ecp256）。如果指定了DH组，IPsec SA密钥更新将使用DH密钥交换。但是，在最初建立连接时，不使用此处指定的DH组，因为其中的密钥来自IKE SA密钥材料。因此，与服务器的任何配置不匹配只会在稍后重新设置密钥时导致错误。</string>
+    <string name="profile_proposals_esp_label">IPsec/ESP 算法</string>
+    <string name="profile_proposals_ike_hint">对于非AEAD/经典加密算法，需要完整性算法、伪随机函数（可选，默认为基于完整性算法的函数）和Diffie-Hellman组（例如aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法，但需要PRF（例如aes256gcm16-prfsha256-ecp256）。</string>
+    <string name="profile_proposals_ike_label">IKEv2算法</string>
+    <string name="profile_proposals_intro">（可选）配置用于IKEv2和/或IPsec/ESP的特定算法，而不是默认算法。请参阅我们的wiki以了解<a href="https://docs.strongswan.org/docs/latest/config/IKEv2CipherSuites.html">算法标识符列表</a>（请注意，此应用程序并不支持所有标识符）。这两个字段都包含一个算法列表，每个算法用连字符分隔。</string>
+    <string name="profile_proposals_label">算法</string>
+    <string name="profile_proxy_exclusions_hint">Optional list of hosts for which the HTTP proxy server is not used (separated by spaces, and wildcards are possible, e.g. \"direct.example.net *.example.com\")</string>
+    <string name="profile_proxy_exclusions_label">Proxy exclusion list</string>
+    <string name="profile_proxy_host_hint">IP address or hostname of the HTTP proxy server to use when connected to the VPN</string>
+    <string name="profile_proxy_host_label">Proxy host</string>
+    <string name="profile_proxy_port_hint">Port to access the HTTP proxy server, defaults to 8080</string>
+    <string name="profile_proxy_port_label">Proxy port</string>
+    <string name="profile_proxy_server_intro">Optional HTTP proxy server to use when connected to the VPN. This is only a recommendation and may be ignored by apps. Note that apps using the proxy will access all HTTP resources through it regardless of the destination, so split-tunneling settings might not have any effect. To avoid using the proxy server for specific hosts, use the exclusion list below.</string>
+    <string name="profile_proxy_server_label">HTTP proxy server</string>
+    <string name="profile_remote_id_hint">默认为已配置的服务器地址。自义定值将在鉴权期间被显式地发送至服务器</string>
+    <string name="profile_remote_id_hint_gateway">默认为 \"%1$s\"。自义定值将在鉴权期间被显式地发送至服务器</string>
+    <string name="profile_remote_id_label">服务器ID</string>
+    <string name="profile_rsa_pss_hint">对RSA签名使用更强的PSS编码，而不是经典的PKCS#1编码。如果服务器不支持此类签名，身份验证将失败。</string>
+    <string name="profile_rsa_pss_label">使用RSA/PSS签名</string>
+    <string name="profile_select_apps">选择应用程序</string>
+    <string name="profile_select_apps_label">应用</string>
+    <string name="profile_select_no_apps">未选择任何应用程序</string>
+    <string name="profile_select_one_app">已选择一个应用程序</string>
+    <string name="profile_select_x_apps">%1$d 应用程序被选择</string>
+    <string name="profile_show_advanced_label">显示高级设置</string>
+    <string name="profile_split_tunneling_intro">默认情况下，客户端将通过VPN路由所有网络流量，除非在建立连接时服务器缩小子网，在这种情况下，只有服务器允许的流量将通过VPN路由（默认情况下，所有其他流量的路由如同没有VPN一样）。</string>
+    <string name="profile_split_tunneling_label">拆分隧道</string>
+    <string name="profile_split_tunnelingv4_title">屏蔽不通过VPN的IPV4流量</string>
+    <string name="profile_split_tunnelingv6_title">屏蔽不通过VPN的IPV6流量</string>
+    <string name="profile_strict_revocation_hint">在严格模式下，身份验证不仅在服务器证书已被吊销的情况下会失败，而且在其状态未知的情况下也会失败（例如，因为OCSP失败且没有有效的CRL可用）。</string>
+    <string name="profile_strict_revocation_label">使用严格的撤销检查</string>
+    <string name="profile_use_crl_hint">如果可用，请使用证书吊销列表（CRL）检查服务器证书是否已被吊销。CRL仅在OCSP不产生结果时使用。</string>
+    <string name="profile_use_crl_label">使用CRLs检查证书</string>
+    <string name="profile_use_ocsp_hint">如果可用，请使用联机证书状态协议（OCSP）检查服务器证书是否未被吊销。</string>
+    <string name="profile_use_ocsp_label">使用OCSP检查证书</string>
+    <string name="profile_user_certificate_install">安装用户证书</string>
+    <string name="profile_user_certificate_label">用户证书</string>
+    <string name="profile_user_select_certificate">选择指定的用户证书</string>
+    <string name="profile_user_select_certificate_label">选择用户证书</string>
+    <string name="profile_username_label">用户名</string>
+    <string name="profile_vpn_type_label">VPN类型</string>
+    <string name="profiles_deleted">所选配置已删除</string>
+    <string name="reconnect">重连</string>
+    <string name="reload_trusted_certs">重载CA证书</string>
+    <string name="remediation_instructions_title">修复指引</string>
+    <string name="replaces_active_connection">这将覆盖您当前活跃的VPN连接！</string>
+    <string name="retry">重试</string>
+    <string name="search">搜索</string>
+    <string msgid="6264217191555673260" name="search_menu_title">"搜索"</string>
+    <string name="searchview_clear_text_content_description">清除文字</string>
+    <string name="searchview_navigation_content_description">返回</string>
+    <string name="select_profiles">选择配置</string>
+    <string name="send_log">发送日志文件</string>
+    <string name="show_log">浏览日志</string>
+    <string name="show_remediation_instructions">浏览修复指引</string>
+    <string name="side_sheet_accessibility_pane_title">侧边动作条</string>
+    <string name="state_connected">已连接</string>
+    <string name="state_connecting">连接中…</string>
+    <string name="state_disabled">无活跃VPN</string>
+    <string name="state_disconnecting">断开连接中…</string>
+    <string name="state_error">错误</string>
+    <string name="state_label">状态：</string>
+    <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
+    <string name="strongswan_shortcut">strongSwan快捷方式</string>
+    <string msgid="9167775378838880170" name="summary_collapsed_preference_list">"<ns1:g id="CURRENT_ITEMS">%1$s</ns1:g>、<ns1:g id="ADDED_ITEMS">%2$s</ns1:g>"</string>
+    <string name="system_tab">系统</string>
+    <string name="tile_connect">连接VPN</string>
+    <string name="tile_default">切换VPN</string>
+    <string name="tile_disconnect">断开VPN</string>
+    <string name="tnc_notice_details"><![CDATA[<p>可信网络连接t (TNC) 允许服务器管理员评定一个用户设备的状况。</p><p>出于此目的，服务器管理员可能要求以下数据如独立ID、已安装软件列表、系统设置、或加密过的文件校验值。</p><b>任何数据都仅将在验证过服务器的身份ID之后被发出。</b>]]></string>
+    <string name="tnc_notice_subtitle">设备数据已被发送至服务器管理员</string>
+    <string name="tnc_notice_title">EAP-TNC可能会影响您的隐私</string>
+    <string name="trusted_certs_title">CA证书</string>
+    <string name="user_tab">用户</string>
+    <string msgid="3140233346420563315" name="v7_preference_off">"已关闭"</string>
+    <string msgid="89551595707643515" name="v7_preference_on">"已开启"</string>
+    <string name="vpn_connected">VPN已连接</string>
+    <string name="vpn_not_supported">您的设备无法支持VPN应用。\n请联系供应商。</string>
+    <string name="vpn_not_supported_during_lockdown">如果内置VPN启用了“始终开启”功能，则不支持VPN连接。</string>
+    <string name="vpn_not_supported_no_permission">无法获得创建VPN连接的权限。可能是因为用户拒绝了，或者是因为其他VPN应用程序启用了“始终打开”功能。</string>
+    <string name="vpn_not_supported_title">无法支持VPN</string>
+    <string name="vpn_profile_connected">此VPN配置目前已连接。</string>
+    <string name="x_profiles_selected">已选择%1$d项配置</string>
+</resources>
