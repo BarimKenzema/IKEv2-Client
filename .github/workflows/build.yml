@@ -60,30 +60,45 @@ jobs:
             echo "strongswan_VERSION := ${VERSION}" > Android.common.mk
           fi
 
-      - name: Patch Android.mk
+      - name: Patch strongSwan for build
         run: |
           cd ss-full
           JNI_MK="src/frontends/android/app/src/main/jni/Android.mk"
+          SS_MK="src/libstrongswan/Android.mk"
 
-          echo "=== Disable BYOD ==="
+          echo "=== 1. Disable BYOD ==="
           sed -i 's/^strongswan_USE_BYOD := true/strongswan_USE_BYOD :=/' "${JNI_MK}"
 
-          echo "=== Remove eap-tls from plugins (needs libtls which has no Android.mk) ==="
+          echo "=== 2. Remove eap-tls from plugins ==="
           sed -i 's/ eap-tls//' "${JNI_MK}"
 
-          echo "=== Disable BYOD in Java ==="
+          echo "=== 3. Disable BYOD in Java ==="
           find src/frontends/android -name "*.java" -exec grep -l "USE_BYOD" {} \; | while read f; do
             sed -i 's/USE_BYOD = true/USE_BYOD = false/g' "$f"
           done
 
+          echo "=== 4. Patch libstrongswan to use shared OpenSSL ==="
+          echo "--- Before ---"
+          grep -n "crypto_static\|ssl_static\|LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES" "${SS_MK}"
           echo ""
-          echo "=== Verify plugins line ==="
+
+          # Change crypto_static -> libcrypto in shared libs instead of static
+          sed -i 's/LOCAL_STATIC_LIBRARIES += crypto_static/LOCAL_SHARED_LIBRARIES += libcrypto/' "${SS_MK}"
+          sed -i 's/LOCAL_STATIC_LIBRARIES += ssl_static/LOCAL_SHARED_LIBRARIES += libssl/' "${SS_MK}"
+          # Also handle := form
+          sed -i 's/LOCAL_STATIC_LIBRARIES := crypto_static/LOCAL_SHARED_LIBRARIES += libcrypto/' "${SS_MK}"
+          sed -i 's/LOCAL_STATIC_LIBRARIES := ssl_static/LOCAL_SHARED_LIBRARIES += libssl/' "${SS_MK}"
+
+          echo "--- After ---"
+          grep -n "crypto\|ssl\|LOCAL_STATIC_LIBRARIES\|LOCAL_SHARED_LIBRARIES" "${SS_MK}"
+
+          echo ""
+          echo "=== 5. Verify final state ==="
+          echo "--- Plugins ---"
           grep "strongswan_CHARON_PLUGINS" "${JNI_MK}"
-          echo ""
-          echo "=== Verify BYOD disabled ==="
+          echo "--- BYOD ---"
           grep "strongswan_USE_BYOD" "${JNI_MK}"
-          echo ""
-          echo "=== Verify build list ==="
+          echo "--- Build list ---"
           grep -A10 "strongswan_BUILD :=" "${JNI_MK}"
 
       - name: Download OpenSSL
@@ -121,7 +136,7 @@ jobs:
           build_ssl x86 android-x86
           build_ssl x86_64 android-x86_64
 
-      - name: Setup OpenSSL in JNI directory
+      - name: Setup OpenSSL in JNI directory (shared libs only)
         run: |
           set -e
           OSSL="ss-full/src/frontends/android/app/src/main/jni/openssl"
@@ -140,26 +155,13 @@ jobs:
                 cp -L "${OUT}/${LIB}.so" "${DEST}/${LIB}.so"
               fi
             done
-            cp "${OUT}/libcrypto.a" "${DEST}/" 2>/dev/null || echo "WARN: no libcrypto.a for ${ABI}"
-            cp "${OUT}/libssl.a" "${DEST}/" 2>/dev/null || echo "WARN: no libssl.a for ${ABI}"
-            echo "${ABI}:"
-            ls -la "${DEST}/"
+            echo "${ABI}: $(ls ${DEST}/)"
           done
 
-      - name: Create openssl Android.mk
+      - name: Create openssl Android.mk (shared only)
         run: |
           TARGET="ss-full/src/frontends/android/app/src/main/jni/openssl/Android.mk"
           printf 'LOCAL_PATH := $(call my-dir)\n\n' > "${TARGET}"
-          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
-          printf 'LOCAL_MODULE := crypto_static\n' >> "${TARGET}"
-          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.a\n' >> "${TARGET}"
-          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
-          printf 'include $(PREBUILT_STATIC_LIBRARY)\n\n' >> "${TARGET}"
-          printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
-          printf 'LOCAL_MODULE := ssl_static\n' >> "${TARGET}"
-          printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libssl.a\n' >> "${TARGET}"
-          printf 'LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include\n' >> "${TARGET}"
-          printf 'include $(PREBUILT_STATIC_LIBRARY)\n\n' >> "${TARGET}"
           printf 'include $(CLEAR_VARS)\n' >> "${TARGET}"
           printf 'LOCAL_MODULE := libcrypto\n' >> "${TARGET}"
           printf 'LOCAL_SRC_FILES := $(TARGET_ARCH_ABI)/libcrypto.so\n' >> "${TARGET}"
@@ -173,7 +175,7 @@ jobs:
           echo "=== openssl/Android.mk ==="
           cat "${TARGET}"
 
-      - name: Test ndk-build before Gradle
+      - name: Test ndk-build
         run: |
           cd ss-full/src/frontends/android/app/src/main/jni
           ${ANDROID_NDK_HOME}/ndk-build \
@@ -212,11 +214,11 @@ jobs:
             echo "=== Missing files ==="
             grep -i "No such file\|No rule to make" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException" | head -10
             echo ""
-            echo "=== C compilation errors ==="
-            grep -E "\.c:[0-9]+:[0-9]+: error:" "${GITHUB_WORKSPACE}/build.log" | head -20
+            echo "=== C/C++ errors ==="
+            grep -E "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter\|TaskExecution\|EventFiring\|DefaultBuild" | head -20
             echo ""
             echo "=== Linker errors ==="
-            grep "undefined reference\|cannot find -l" "${GITHUB_WORKSPACE}/build.log" | head -20
+            grep "undefined reference\|cannot find -l\|recompile with -fPIC" "${GITHUB_WORKSPACE}/build.log" | head -10
             exit 1
           fi
 
