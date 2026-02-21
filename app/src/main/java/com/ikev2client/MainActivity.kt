@@ -1,48 +1,32 @@
 package com.ikev2client
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
-import android.net.Ikev2VpnProfile
-import android.net.VpnManager
-import android.net.VpnService
-import android.os.Build
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.textfield.TextInputEditText
-import com.google.gson.Gson
 import com.ikev2client.adapter.ProfileAdapter
 import com.ikev2client.crypto.ProfileCrypto
 import com.ikev2client.databinding.ActivityMainBinding
 import com.ikev2client.model.VpnProfile
 import com.ikev2client.storage.ProfileStorage
-import java.io.ByteArrayInputStream
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
+import org.json.JSONObject
+import java.io.File
+import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var storage: ProfileStorage
     private lateinit var adapter: ProfileAdapter
-    private var pendingProfile: VpnProfile? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    private val vpnConsentLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            pendingProfile?.let { provisionAndStartVpn(it) }
-        } else {
-            Toast.makeText(this, "VPN permission denied", Toast.LENGTH_SHORT).show()
-        }
-        pendingProfile = null
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,19 +58,13 @@ class MainActivity : AppCompatActivity() {
             refreshProfiles()
         }
 
-        VpnConnectionService.stateListener = { state, message ->
-            runOnUiThread {
-                updateConnectionStatus(state, message)
-            }
-        }
-
         refreshProfiles()
     }
 
     override fun onResume() {
         super.onResume()
         refreshProfiles()
-        updateConnectionStatus(VpnConnectionService.connectionState, null)
+        updateVpnStatus()
     }
 
     private fun refreshProfiles() {
@@ -104,152 +82,155 @@ class MainActivity : AppCompatActivity() {
             binding.tvEmpty.visibility = View.GONE
             binding.rvProfiles.visibility = View.VISIBLE
         }
+    }
 
-        val isConnected = VpnConnectionService.connectionState == VpnConnectionService.ConnectionState.CONNECTED
-        adapter.setConnectionState(VpnConnectionService.currentProfileId, isConnected)
+    private fun updateVpnStatus() {
+        val isVpn = isVpnActive()
+        binding.tvConnectionStatus.text = if (isVpn) "VPN Active" else "VPN Not Active"
+        binding.tvConnectionStatus.setTextColor(
+            if (isVpn) android.graphics.Color.parseColor("#4CAF50")
+            else android.graphics.Color.parseColor("#BBDEFB")
+        )
+    }
+
+    private fun isVpnActive(): Boolean {
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return false
+        val networks = cm.allNetworks
+        for (network in networks) {
+            val caps = cm.getNetworkCapabilities(network) ?: continue
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true
+        }
+        return false
     }
 
     private fun onConnectClicked(profile: VpnProfile) {
-        // If already connected to this profile, disconnect
-        if (VpnConnectionService.isRunning && VpnConnectionService.currentProfileId == profile.id) {
-            disconnectVpn()
-            return
-        }
-
-        // If connected to another, disconnect first
-        if (VpnConnectionService.isRunning) {
-            disconnectVpn()
-            mainHandler.postDelayed({ requestVpnConsent(profile) }, 500)
-            return
-        }
-
         if (profile.isExpired()) {
             Toast.makeText(this, "This profile has expired!", Toast.LENGTH_SHORT).show()
             return
         }
 
-        requestVpnConsent(profile)
-    }
-
-    private fun requestVpnConsent(profile: VpnProfile) {
-        // Step 1: Get VPN consent from the system
-        val consentIntent = VpnService.prepare(this)
-        if (consentIntent != null) {
-            pendingProfile = profile
-            vpnConsentLauncher.launch(consentIntent)
-        } else {
-            // Already have consent
-            provisionAndStartVpn(profile)
+        // Check if strongSwan is installed
+        if (!isStrongSwanInstalled()) {
+            AlertDialog.Builder(this)
+                .setTitle("strongSwan Required")
+                .setMessage("Please install 'strongSwan VPN Client' from Google Play Store first.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
         }
+
+        // Show password dialog, then export to strongSwan
+        showPasswordAndExport(profile)
     }
 
-    private fun provisionAndStartVpn(profile: VpnProfile) {
+    private fun showPasswordAndExport(profile: VpnProfile) {
+        AlertDialog.Builder(this)
+            .setTitle("Connect: ${profile.name}")
+            .setMessage(
+                "Server: ${profile.server}\n" +
+                "Username: ${profile.username}\n" +
+                "Password: ${profile.password}\n\n" +
+                "Steps:\n" +
+                "1. Tap 'Copy Password' below\n" +
+                "2. Tap 'Open strongSwan'\n" +
+                "3. In strongSwan, tap 'IMPORT'\n" +
+                "4. Paste the password in the password field\n" +
+                "5. Tap 'SAVE' then tap the profile to connect"
+            )
+            .setPositiveButton("Copy Password") { _, _ ->
+                // Copy password to clipboard
+                val clipboard = getSystemService(ClipboardManager::class.java)
+                clipboard?.setPrimaryClip(
+                    ClipData.newPlainText("vpn_password", profile.password)
+                )
+                Toast.makeText(this, "Password copied!", Toast.LENGTH_SHORT).show()
+
+                // Then export to strongSwan
+                exportToStrongSwan(profile)
+            }
+            .setNegativeButton("Cancel", null)
+            .setNeutralButton("Open strongSwan") { _, _ ->
+                // Just launch strongSwan (profile already imported before)
+                launchStrongSwan()
+            }
+            .show()
+    }
+
+    private fun exportToStrongSwan(profile: VpnProfile) {
         try {
-            val vpnManager = getSystemService(VpnManager::class.java)
-            if (vpnManager == null) {
-                Toast.makeText(this, "VpnManager not available on this device", Toast.LENGTH_LONG).show()
-                return
+            // Create .sswan profile file
+            val json = JSONObject()
+            json.put("uuid", UUID.randomUUID().toString())
+            json.put("name", profile.name)
+            json.put("type", "ikev2-eap")
+
+            val remote = JSONObject()
+            remote.put("addr", profile.server)
+            if (profile.remoteId.isNotBlank()) {
+                remote.put("id", profile.remoteId)
             }
 
-            // Build the IKEv2 profile
-            val ikev2Profile = buildIkev2Profile(profile)
-
-            // Provision the profile with the system
-            try {
-                vpnManager.provisionVpnProfile(ikev2Profile)
-            } catch (e: SecurityException) {
-                Toast.makeText(this, "VPN provision denied: ${e.message}", Toast.LENGTH_LONG).show()
-                return
-            } catch (e: Exception) {
-                Toast.makeText(this, "Provision failed: ${e.message}", Toast.LENGTH_LONG).show()
-                return
+            // Convert PEM certificate to base64 DER for strongSwan
+            if (!profile.caCert.isNullOrBlank()) {
+                val base64Der = profile.caCert
+                    .replace("-----BEGIN CERTIFICATE-----", "")
+                    .replace("-----END CERTIFICATE-----", "")
+                    .replace("\n", "")
+                    .replace("\r", "")
+                    .replace(" ", "")
+                    .trim()
+                remote.put("cert", base64Der)
             }
 
-            // Start the provisioned VPN
-            try {
-                vpnManager.startProvisionedVpnProfile()
-            } catch (e: SecurityException) {
-                Toast.makeText(this, "VPN start denied: ${e.message}", Toast.LENGTH_LONG).show()
-                return
-            } catch (e: IllegalStateException) {
-                Toast.makeText(this, "No profile provisioned: ${e.message}", Toast.LENGTH_LONG).show()
-                return
-            } catch (e: Exception) {
-                Toast.makeText(this, "Start failed: ${e.message}", Toast.LENGTH_LONG).show()
-                return
-            }
+            json.put("remote", remote)
 
-            // Start the monitoring service
-            val serviceIntent = Intent(this, VpnConnectionService::class.java).apply {
-                action = VpnConnectionService.ACTION_MONITOR
-                putExtra(VpnConnectionService.EXTRA_PROFILE_JSON, Gson().toJson(profile))
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent)
-            } else {
-                startService(serviceIntent)
-            }
+            val local = JSONObject()
+            local.put("eap_id", profile.username)
+            json.put("local", local)
 
-            storage.setActiveProfileId(profile.id)
-            refreshProfiles()
+            // Write to cache directory
+            val fileName = profile.name.replace(Regex("[^a-zA-Z0-9._-]"), "_") + ".sswan"
+            val file = File(cacheDir, fileName)
+            file.writeText(json.toString(2))
+
+            // Open with strongSwan via FileProvider
+            val uri = FileProvider.getUriForFile(
+                this,
+                "${packageName}.fileprovider",
+                file
+            )
+
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.setDataAndType(uri, "application/vnd.strongswan.profile")
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
 
         } catch (e: Exception) {
-            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun buildIkev2Profile(profile: VpnProfile): Ikev2VpnProfile {
-        val builder = Ikev2VpnProfile.Builder(profile.server, profile.remoteId)
-
-        // Parse CA certificate if provided
-        var caCert: X509Certificate? = null
-        if (!profile.caCert.isNullOrBlank()) {
-            try {
-                val cf = CertificateFactory.getInstance("X.509")
-                caCert = cf.generateCertificate(
-                    ByteArrayInputStream(profile.caCert.toByteArray(Charsets.UTF_8))
-                ) as X509Certificate
-            } catch (e: Exception) {
-                // Fall back to system trust store
-            }
+    private fun isStrongSwanInstalled(): Boolean {
+        return try {
+            packageManager.getPackageInfo("org.strongswan.android", 0)
+            true
+        } catch (e: Exception) {
+            false
         }
-
-        // Set authentication
-        when (profile.authMethod) {
-            "psk" -> {
-                val psk = (profile.psk ?: profile.password).toByteArray(Charsets.UTF_8)
-                builder.setAuthPsk(psk)
-            }
-            else -> {
-                // EAP (MSCHAPv2, etc.)
-                builder.setAuthUsernamePassword(
-                    profile.username,
-                    profile.password,
-                    caCert
-                )
-            }
-        }
-
-        builder.setMaxMtu(profile.mtu)
-        builder.setBypassable(profile.splitTunneling)
-
-        return builder.build()
     }
 
-    private fun disconnectVpn() {
-        // Stop via VpnManager
+    private fun launchStrongSwan() {
         try {
-            val vpnManager = getSystemService(VpnManager::class.java)
-            vpnManager?.stopProvisionedVpnProfile()
-        } catch (e: Exception) { }
-
-        // Stop monitoring service
-        val intent = Intent(this, VpnConnectionService::class.java).apply {
-            action = VpnConnectionService.ACTION_DISCONNECT
+            val intent = packageManager.getLaunchIntentForPackage("org.strongswan.android")
+            if (intent != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "Could not launch strongSwan", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
-        startService(intent)
-        storage.setActiveProfileId(null)
-        refreshProfiles()
     }
 
     private fun onDeleteClicked(profile: VpnProfile, position: Int) {
@@ -257,9 +238,6 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Delete Profile")
             .setMessage("Delete '${profile.name}'?")
             .setPositiveButton("Delete") { _, _ ->
-                if (VpnConnectionService.currentProfileId == profile.id) {
-                    disconnectVpn()
-                }
                 storage.removeProfile(profile.id)
                 adapter.removeAt(position)
                 refreshProfiles()
@@ -315,29 +293,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateConnectionStatus(state: VpnConnectionService.ConnectionState, message: String?) {
-        binding.tvConnectionStatus.text = when (state) {
-            VpnConnectionService.ConnectionState.DISCONNECTED -> "Disconnected"
-            VpnConnectionService.ConnectionState.CONNECTING -> "Connecting..."
-            VpnConnectionService.ConnectionState.CONNECTED -> "Connected"
-            VpnConnectionService.ConnectionState.DISCONNECTING -> "Disconnecting..."
-            VpnConnectionService.ConnectionState.ERROR -> "Error: ${message ?: "Unknown"}"
-        }
-
-        binding.tvConnectionStatus.setTextColor(
-            when (state) {
-                VpnConnectionService.ConnectionState.CONNECTED -> android.graphics.Color.parseColor("#4CAF50")
-                VpnConnectionService.ConnectionState.ERROR -> android.graphics.Color.parseColor("#F44336")
-                VpnConnectionService.ConnectionState.CONNECTING -> android.graphics.Color.parseColor("#FF9800")
-                else -> android.graphics.Color.parseColor("#BBDEFB")
-            }
-        )
-
-        refreshProfiles()
-    }
-
     override fun onDestroy() {
-        VpnConnectionService.stateListener = null
         super.onDestroy()
     }
 }
