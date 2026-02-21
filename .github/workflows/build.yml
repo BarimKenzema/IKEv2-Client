@@ -2,92 +2,285 @@ name: Build strongSwan APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+env:
+  OPENSSL_VERSION: "3.3.1"
+  NDK_VERSION: "27.3.13750724"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout our repo
-      uses: actions/checkout@v4
+      - name: Checkout our repo
+        uses: actions/checkout@v4
 
-    - name: Install system build tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          automake autoconf libtool pkg-config gettext \
-          flex bison gperf python3 \
-          libgmp-dev libssl-dev
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Clone strongSwan from GitHub
-      run: |
-        git clone --depth 1 --branch 6.0.4 https://github.com/strongswan/strongswan.git ss-full
-        echo "=== Verify Android frontend ==="
-        ls ss-full/src/frontends/android/
-        ls ss-full/src/frontends/android/app/
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf automake libtool pkg-config gettext \
+            python3 bison flex gperf \
+            perl curl unzip git
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up Android SDK and NDK
+        run: |
+          # NDK should already be installed on GitHub runners
+          echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+          # Verify NDK exists
+          ls /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}/ndk-build
 
-    - name: Install NDK and accept licenses
-      run: |
-        sdkmanager --install "ndk;27.3.13750724"
-        yes | sdkmanager --licenses || true
+      - name: Clone strongSwan
+        run: |
+          git clone --depth 1 https://github.com/strongswan/strongswan.git ss-full
 
-    - name: Install Gradle
-      run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.13-bin.zip
-        unzip -q gradle-8.13-bin.zip -d /opt
-        echo "/opt/gradle-8.13/bin" >> $GITHUB_PATH
+      - name: Run strongSwan autogen.sh
+        run: |
+          cd ss-full
+          ./autogen.sh
 
-    - name: Generate strongSwan build files
-      run: |
-        cd ss-full
-        ./autogen.sh
-        ./configure --disable-dependency-tracking
-        echo "=== Verify generated files ==="
-        test -f config.h && echo "config.h OK" || echo "config.h MISSING"
-        test -f Android.common.mk && echo "Android.common.mk OK" || echo "Android.common.mk MISSING"
+      - name: Configure strongSwan (host tools only)
+        run: |
+          cd ss-full
+          ./configure \
+            --disable-defaults \
+            --enable-charon \
+            --enable-ikev2 \
+            --enable-nonce \
+            --enable-pem \
+            --enable-pkcs1 \
+            --enable-pkcs8 \
+            --enable-x509 \
+            --enable-openssl \
+            --enable-kernel-netlink \
+            --enable-socket-default \
+            --enable-eap-identity \
+            --enable-eap-mschapv2 \
+            --enable-eap-tls \
+            --enable-eap-ttls \
+            --enable-eap-peap \
+            --enable-revocation \
+            --enable-unity
 
-    - name: Generate debug keystore
-      run: |
-        mkdir -p ~/.android
-        keytool -genkeypair \
-          -alias androiddebugkey \
-          -keypass android \
-          -keystore ~/.android/debug.keystore \
-          -storepass android \
-          -dname "CN=Android Debug,O=Android,C=US" \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000
+      - name: Download and cross-compile OpenSSL for Android
+        run: |
+          set -e
 
-    - name: Generate Gradle wrapper
-      run: |
-        cd ss-full/src/frontends/android
-        gradle wrapper --gradle-version 8.13 --no-configuration-cache
-      env:
-        ANDROID_HOME: /usr/local/lib/android/sdk
+          OPENSSL_DIR="openssl-${OPENSSL_VERSION}"
+          OPENSSL_TAR="openssl-${OPENSSL_VERSION}.tar.gz"
+          NDK="${ANDROID_NDK_HOME}"
+          JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
 
-    - name: Build Debug APK
-      run: |
-        cd ss-full/src/frontends/android
-        chmod +x gradlew
-        ./gradlew assembleDebug --no-configuration-cache
-      env:
-        ANDROID_HOME: /usr/local/lib/android/sdk
-        ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.3.13750724
+          # Download OpenSSL
+          curl -L -o "${OPENSSL_TAR}" \
+            "https://www.openssl.org/source/${OPENSSL_TAR}"
+          tar xzf "${OPENSSL_TAR}"
 
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: strongswan-debug-apk
-        path: ss-full/src/frontends/android/app/build/outputs/apk/debug/*.apk
+          # We'll build for each ABI strongSwan needs
+          # The Android.mk expects prebuilt libs in jni/openssl/
+
+          mkdir -p "${JNI_DIR}/openssl"
+
+          # Define the ABIs to build
+          declare -A ABI_MAP
+          ABI_MAP[arm64-v8a]="android-arm64"
+          ABI_MAP[armeabi-v7a]="android-arm"
+          ABI_MAP[x86]="android-x86"
+          ABI_MAP[x86_64]="android-x86_64"
+
+          TOOLCHAIN="${NDK}/toolchains/llvm/prebuilt/linux-x86_64"
+
+          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
+            echo "========================================="
+            echo "Building OpenSSL for ${ABI}"
+            echo "========================================="
+
+            TARGET="${ABI_MAP[$ABI]}"
+            BUILD_DIR="${GITHUB_WORKSPACE}/openssl-build-${ABI}"
+            PREFIX="${GITHUB_WORKSPACE}/openssl-output-${ABI}"
+
+            cp -r "${OPENSSL_DIR}" "${BUILD_DIR}"
+            cd "${BUILD_DIR}"
+
+            export ANDROID_NDK_ROOT="${NDK}"
+            export PATH="${TOOLCHAIN}/bin:${PATH}"
+
+            ./Configure "${TARGET}" \
+              -D__ANDROID_API__=21 \
+              --prefix="${PREFIX}" \
+              --openssldir="${PREFIX}" \
+              no-shared \
+              no-tests \
+              no-ui-console
+
+            make -j$(nproc)
+            make install_sw
+
+            cd "${GITHUB_WORKSPACE}"
+          done
+
+          echo "OpenSSL cross-compilation complete."
+
+      - name: Create OpenSSL Android.mk for strongSwan
+        run: |
+          set -e
+
+          JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
+          OPENSSL_JNI="${JNI_DIR}/openssl"
+
+          # Create the directory structure strongSwan expects
+          # strongSwan's Android.mk includes openssl/Android.mk which should
+          # provide LOCAL_MODULE for libcrypto_static and libssl_static
+          # (or shared libs depending on the version)
+
+          # Let's check what strongSwan's Android.mk actually expects
+          echo "=== strongSwan Android.mk references to openssl ==="
+          grep -n "openssl" "${JNI_DIR}/Android.mk" || true
+
+          echo ""
+          echo "=== Checking for import patterns ==="
+          grep -n "include.*openssl" "${JNI_DIR}/Android.mk" || true
+
+          echo ""
+          echo "=== Full Android.mk ==="
+          cat "${JNI_DIR}/Android.mk"
+
+      - name: Inspect strongSwan JNI structure and create proper OpenSSL integration
+        run: |
+          set -e
+
+          JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
+          OPENSSL_JNI="${JNI_DIR}/openssl"
+
+          # Look at what modules are expected
+          echo "=== Looking for module references ==="
+          grep -rn "openssl\|libcrypto\|libssl" "${JNI_DIR}/Android.mk"
+
+          echo ""
+          echo "=== Looking for LOCAL_STATIC_LIBRARIES or LOCAL_SHARED_LIBRARIES ==="
+          grep -n "STATIC_LIBRARIES\|SHARED_LIBRARIES" "${JNI_DIR}/Android.mk" || true
+
+          # Now create the openssl/Android.mk
+          # strongSwan typically expects prebuilt static libraries
+
+          # For each ABI, we need to put the .a files in the right place
+          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
+            PREFIX="${GITHUB_WORKSPACE}/openssl-output-${ABI}"
+            TARGET_DIR="${OPENSSL_JNI}/libs/${ABI}"
+            mkdir -p "${TARGET_DIR}"
+            cp "${PREFIX}/lib/libcrypto.a" "${TARGET_DIR}/"
+            cp "${PREFIX}/lib/libssl.a" "${TARGET_DIR}/"
+          done
+
+          # Copy headers (same for all ABIs)
+          cp -r "${GITHUB_WORKSPACE}/openssl-output-arm64-v8a/include" "${OPENSSL_JNI}/"
+
+          # Create the Android.mk that provides prebuilt static libs
+          cat > "${OPENSSL_JNI}/Android.mk" << 'ANDROIDMK'
+          LOCAL_PATH := $(call my-dir)
+
+          # libcrypto - prebuilt static
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libcrypto_static
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libcrypto.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
+
+          # libssl - prebuilt static
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libssl_static
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libssl.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
+
+          # Aliases without _static suffix (some build scripts reference them differently)
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := crypto
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libcrypto.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
+
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := ssl
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libssl.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
+
+          # Shared library wrappers (if the build expects .so)
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := crypto_shared
+          LOCAL_WHOLE_STATIC_LIBRARIES := crypto
+          include $(BUILD_SHARED_LIBRARY)
+
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := ssl_shared
+          LOCAL_WHOLE_STATIC_LIBRARIES := ssl
+          LOCAL_SHARED_LIBRARIES := crypto_shared
+          include $(BUILD_SHARED_LIBRARY)
+          ANDROIDMK
+
+          echo "=== Created openssl/Android.mk ==="
+          cat "${OPENSSL_JNI}/Android.mk"
+
+          echo ""
+          echo "=== OpenSSL JNI directory structure ==="
+          find "${OPENSSL_JNI}" -type f | head -50
+
+      - name: Verify strongSwan build files exist
+        run: |
+          set -e
+
+          JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
+
+          echo "=== JNI directory listing ==="
+          ls -la "${JNI_DIR}/"
+
+          echo ""
+          echo "=== OpenSSL directory ==="
+          ls -la "${JNI_DIR}/openssl/"
+
+          echo ""
+          echo "=== Checking Android.mk include line ==="
+          # Show the exact line that includes openssl/Android.mk
+          awk '/openssl/ { print NR": "$0 }' "${JNI_DIR}/Android.mk"
+
+          echo ""
+          echo "=== Verifying .a files exist ==="
+          find "${JNI_DIR}/openssl" -name "*.a" -ls
+
+      - name: Build strongSwan APK
+        run: |
+          cd ss-full/src/frontends/android
+
+          # Set gradle properties
+          cat > local.properties << EOF
+          sdk.dir=${ANDROID_SDK_ROOT}
+          ndk.dir=${ANDROID_NDK_HOME}
+          EOF
+
+          chmod +x ./gradlew
+
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx4g"
+
+      - name: Find and upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: strongswan-debug-apk
+          path: |
+            ss-full/src/frontends/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
