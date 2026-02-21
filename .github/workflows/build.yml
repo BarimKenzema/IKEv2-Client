@@ -10,7 +10,6 @@ on:
 env:
   OPENSSL_VERSION: "3.3.1"
   NDK_VERSION: "27.3.13750724"
-  STRONGSWAN_VERSION: "6.0.0"
 
 jobs:
   build:
@@ -31,8 +30,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             autoconf automake libtool pkg-config gettext \
-            python3 bison flex gperf \
-            perl curl unzip git
+            python3 bison flex gperf perl curl unzip git
 
       - name: Set environment variables
         run: |
@@ -43,64 +41,34 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/strongswan/strongswan.git ss-full
 
-      - name: Inspect what strongSwan actually expects
+      - name: Inspect strongSwan build files
         run: |
           set -e
           JNI_DIR="ss-full/src/frontends/android/app/src/main/jni"
-
           echo "========================================="
           echo "=== Full Android.mk ==="
           echo "========================================="
           cat "${JNI_DIR}/Android.mk"
-
           echo ""
           echo "========================================="
           echo "=== Application.mk ==="
           echo "========================================="
           cat "${JNI_DIR}/Application.mk"
-
           echo ""
           echo "========================================="
-          echo "=== All .mk files in JNI dir ==="
-          echo "========================================="
-          find "${JNI_DIR}" -name "*.mk" -ls
-
-          echo ""
-          echo "========================================="
-          echo "=== build.gradle or build.gradle.kts ==="
+          echo "=== build.gradle ==="
           echo "========================================="
           cat ss-full/src/frontends/android/app/build.gradle* 2>/dev/null || echo "No build.gradle found"
-
           echo ""
           echo "========================================="
-          echo "=== settings.gradle ==="
-          echo "========================================="
-          cat ss-full/src/frontends/android/settings.gradle* 2>/dev/null || echo "No settings.gradle found"
-
-          echo ""
-          echo "========================================="
-          echo "=== Any README or HACKING files ==="
-          echo "========================================="
-          cat ss-full/src/frontends/android/HACKING 2>/dev/null || echo "No HACKING file"
-          cat ss-full/src/frontends/android/README* 2>/dev/null || echo "No README file"
-
-          echo ""
-          echo "========================================="
-          echo "=== Top-level HACKING ==="
-          echo "========================================="
-          head -200 ss-full/HACKING 2>/dev/null || echo "No top-level HACKING"
-
-          echo ""
-          echo "========================================="
-          echo "=== gradle.properties ==="
-          echo "========================================="
-          cat ss-full/src/frontends/android/gradle.properties 2>/dev/null || echo "None"
-
-          echo ""
-          echo "========================================="
-          echo "=== List of all files in jni/ ==="
+          echo "=== All files in jni/ (depth 2) ==="
           echo "========================================="
           find "${JNI_DIR}" -maxdepth 2 -ls
+          echo ""
+          echo "========================================="
+          echo "=== crypto/ssl references in Android.mk ==="
+          echo "========================================="
+          grep -n "openssl\|libcrypto\|libssl\|crypto\|ssl\|OPENSSL\|STATIC_LIB\|SHARED_LIB" "${JNI_DIR}/Android.mk" || true
 
       - name: Run strongSwan autogen.sh
         run: |
@@ -118,223 +86,109 @@ jobs:
             "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"
           tar xzf "openssl-${OPENSSL_VERSION}.tar.gz"
 
-      - name: Cross-compile OpenSSL for all Android ABIs
+      - name: Cross-compile OpenSSL for Android
         run: |
           set -e
-
           NDK="${ANDROID_NDK_HOME}"
           TOOLCHAIN="${NDK}/toolchains/llvm/prebuilt/linux-x86_64"
-          JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
           OPENSSL_SRC="${GITHUB_WORKSPACE}/openssl-${OPENSSL_VERSION}"
-
-          declare -A ABI_TARGET
-          ABI_TARGET[arm64-v8a]="android-arm64"
-          ABI_TARGET[armeabi-v7a]="android-arm"
-          ABI_TARGET[x86]="android-x86"
-          ABI_TARGET[x86_64]="android-x86_64"
 
           export ANDROID_NDK_ROOT="${NDK}"
           export PATH="${TOOLCHAIN}/bin:${PATH}"
 
-          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
+          build_openssl() {
+            local ABI=$1
+            local TARGET=$2
             echo "========================================="
-            echo "Building OpenSSL for ${ABI}"
+            echo "Building OpenSSL for ${ABI} (${TARGET})"
             echo "========================================="
-
-            TARGET="${ABI_TARGET[$ABI]}"
-            BUILD_DIR="${GITHUB_WORKSPACE}/openssl-build-${ABI}"
-            PREFIX="${GITHUB_WORKSPACE}/openssl-output-${ABI}"
-
-            # Fresh copy for each ABI
+            local BUILD_DIR="${GITHUB_WORKSPACE}/openssl-build-${ABI}"
+            local PREFIX="${GITHUB_WORKSPACE}/openssl-output-${ABI}"
             rm -rf "${BUILD_DIR}"
             cp -r "${OPENSSL_SRC}" "${BUILD_DIR}"
             cd "${BUILD_DIR}"
-
             ./Configure "${TARGET}" \
               -D__ANDROID_API__=21 \
               --prefix="${PREFIX}" \
               --openssldir="${PREFIX}" \
-              no-shared \
-              no-tests \
-              no-ui-console \
-              no-stdio
-
+              no-shared no-tests no-ui-console no-stdio
             make -j$(nproc) build_libs
             make install_sw
-
-            echo "Built libs for ${ABI}:"
-            ls -la "${PREFIX}/lib/"*.a 2>/dev/null || ls -la "${PREFIX}/lib64/"*.a 2>/dev/null || echo "Check lib paths"
+            echo "Built for ${ABI}:"
             find "${PREFIX}" -name "*.a" -ls
-
             cd "${GITHUB_WORKSPACE}"
-          done
+          }
 
-      - name: Create OpenSSL Android.mk for strongSwan
+          build_openssl "arm64-v8a" "android-arm64"
+          build_openssl "armeabi-v7a" "android-arm"
+          build_openssl "x86" "android-x86"
+          build_openssl "x86_64" "android-x86_64"
+
+      - name: Setup OpenSSL for strongSwan JNI
         run: |
           set -e
-
           JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
           OPENSSL_JNI="${JNI_DIR}/openssl"
-
           mkdir -p "${OPENSSL_JNI}"
 
-          # Copy headers from one build (they're arch-independent)
-          HEADER_SOURCE=""
+          # Copy headers from arm64 build (arch-independent)
+          find "${GITHUB_WORKSPACE}/openssl-output-arm64-v8a" -type d -name "include" | head -1 | xargs -I{} cp -r {} "${OPENSSL_JNI}/"
+
+          # Copy per-ABI static libs
           for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
             PREFIX="${GITHUB_WORKSPACE}/openssl-output-${ABI}"
-            if [ -d "${PREFIX}/include" ]; then
-              HEADER_SOURCE="${PREFIX}/include"
-              break
-            fi
-          done
-          cp -r "${HEADER_SOURCE}" "${OPENSSL_JNI}/"
-
-          # Copy per-ABI static libraries
-          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
-            PREFIX="${GITHUB_WORKSPACE}/openssl-output-${ABI}"
-            TARGET_LIB_DIR="${OPENSSL_JNI}/libs/${ABI}"
-            mkdir -p "${TARGET_LIB_DIR}"
-
-            # Find the .a files (could be in lib/ or lib64/)
-            find "${PREFIX}" -name "libcrypto.a" -exec cp {} "${TARGET_LIB_DIR}/" \;
-            find "${PREFIX}" -name "libssl.a" -exec cp {} "${TARGET_LIB_DIR}/" \;
-
-            echo "Copied to ${TARGET_LIB_DIR}:"
-            ls -la "${TARGET_LIB_DIR}/"
+            TARGET_DIR="${OPENSSL_JNI}/libs/${ABI}"
+            mkdir -p "${TARGET_DIR}"
+            find "${PREFIX}" -name "libcrypto.a" -exec cp {} "${TARGET_DIR}/" \;
+            find "${PREFIX}" -name "libssl.a" -exec cp {} "${TARGET_DIR}/" \;
+            echo "${ABI}: $(ls ${TARGET_DIR}/)"
           done
 
-          # Now read strongSwan's Android.mk to figure out exact module names
-          echo ""
-          echo "=== Analyzing strongSwan Android.mk for openssl references ==="
-          grep -n "openssl\|libcrypto\|libssl\|OPENSSL\|crypto\b\|ssl\b" "${JNI_DIR}/Android.mk" || true
+          # Create Android.mk
+          cat > "${OPENSSL_JNI}/Android.mk" << 'MKEOF'
+          LOCAL_PATH := $(call my-dir)
 
-          # Read the exact include line
-          INCLUDE_LINE=$(grep "openssl/Android.mk" "${JNI_DIR}/Android.mk" || true)
-          echo "Include line: ${INCLUDE_LINE}"
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libcrypto_static
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libcrypto.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
 
-          # Check what module names are referenced as dependencies
-          echo ""
-          echo "=== All LOCAL_SHARED_LIBRARIES and LOCAL_STATIC_LIBRARIES ==="
-          grep -n "LOCAL_SHARED_LIBRARIES\|LOCAL_STATIC_LIBRARIES\|LOCAL_LDLIBS" "${JNI_DIR}/Android.mk" || true
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := libssl_static
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libssl.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
 
-          # Check all .mk files for crypto/ssl references
-          echo ""
-          echo "=== References in all .mk files ==="
-          find "${JNI_DIR}" -name "*.mk" -exec grep -ln "crypto\|ssl\|openssl" {} \; 2>/dev/null || true
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := crypto
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libcrypto.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
 
-          for mkfile in $(find "${JNI_DIR}" -name "*.mk" ! -path "*/openssl/*"); do
-            refs=$(grep -n "crypto\|libssl\|openssl" "$mkfile" 2>/dev/null || true)
-            if [ -n "$refs" ]; then
-              echo ""
-              echo "--- $mkfile ---"
-              echo "$refs"
-            fi
-          done
+          include $(CLEAR_VARS)
+          LOCAL_MODULE := ssl
+          LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libssl.a
+          LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+          include $(PREBUILT_STATIC_LIBRARY)
+          MKEOF
 
-      - name: Generate correct openssl/Android.mk based on analysis
-        run: |
-          set -e
-
-          JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
-          OPENSSL_JNI="${JNI_DIR}/openssl"
-
-          # The strongSwan Android.mk typically just does:
-          #   include $(LOCAL_PATH)/openssl/Android.mk
-          # And expects modules named "libcrypto_static" and "libssl_static"
-          # OR "crypto" and "ssl" depending on the version.
-          #
-          # Let's provide ALL possible module names to be safe.
-
-          cat > "${OPENSSL_JNI}/Android.mk" << 'EOF'
-LOCAL_PATH := $(call my-dir)
-
-# --- libcrypto prebuilt static ---
-include $(CLEAR_VARS)
-LOCAL_MODULE := libcrypto_static
-LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libcrypto.a
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
-include $(PREBUILT_STATIC_LIBRARY)
-
-# --- libssl prebuilt static ---
-include $(CLEAR_VARS)
-LOCAL_MODULE := libssl_static
-LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libssl.a
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
-include $(PREBUILT_STATIC_LIBRARY)
-
-# --- Alias: crypto ---
-include $(CLEAR_VARS)
-LOCAL_MODULE := crypto
-LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libcrypto.a
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
-include $(PREBUILT_STATIC_LIBRARY)
-
-# --- Alias: ssl ---
-include $(CLEAR_VARS)
-LOCAL_MODULE := ssl
-LOCAL_SRC_FILES := libs/$(TARGET_ARCH_ABI)/libssl.a
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
-include $(PREBUILT_STATIC_LIBRARY)
-EOF
-
-          echo "=== Final openssl/Android.mk ==="
+          echo "=== Created Android.mk ==="
           cat "${OPENSSL_JNI}/Android.mk"
-
           echo ""
-          echo "=== Complete openssl directory structure ==="
-          find "${OPENSSL_JNI}" -type f | sort | head -30
-          echo "..."
+          echo "=== Verify structure ==="
           find "${OPENSSL_JNI}" -name "*.a" -ls
-
-      - name: Verify all build prerequisites
-        run: |
-          set -e
-
-          JNI_DIR="${GITHUB_WORKSPACE}/ss-full/src/frontends/android/app/src/main/jni"
-
-          echo "=== JNI root contents ==="
-          ls -la "${JNI_DIR}/"
-
-          echo ""
-          echo "=== openssl/ contents ==="
-          ls -la "${JNI_DIR}/openssl/"
-
-          echo ""
-          echo "=== Checking that openssl/Android.mk is readable ==="
-          head -5 "${JNI_DIR}/openssl/Android.mk"
-
-          echo ""
-          echo "=== Verify .a files for all ABIs ==="
-          for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
-            echo "  ${ABI}:"
-            ls -la "${JNI_DIR}/openssl/libs/${ABI}/" 2>/dev/null || echo "    MISSING!"
-          done
-
-          echo ""
-          echo "=== Verify headers ==="
-          ls "${JNI_DIR}/openssl/include/openssl/" | head -10
-
-          echo ""
-          echo "=== NDK version ==="
-          cat "${ANDROID_NDK_HOME}/source.properties"
+          ls "${OPENSSL_JNI}/include/openssl/" | head -5
 
       - name: Build strongSwan APK
         run: |
           cd ss-full/src/frontends/android
-
-          cat > local.properties << EOF
+          cat > local.properties << PROPEOF
           sdk.dir=${ANDROID_SDK_ROOT}
           ndk.dir=${ANDROID_NDK_HOME}
-          EOF
-
+          PROPEOF
           chmod +x ./gradlew 2>/dev/null || true
-
-          # Build with full output
-          ./gradlew assembleDebug \
-            --no-daemon \
-            --stacktrace \
-            --info \
-            2>&1 | tail -300
+          ./gradlew assembleDebug --no-daemon --stacktrace --info 2>&1 | tail -400
 
       - name: Upload APK
         if: success()
@@ -344,12 +198,17 @@ EOF
           path: ss-full/src/frontends/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
-      - name: Upload build logs on failure
+      - name: Save failure logs
+        if: failure()
+        run: |
+          mkdir -p failure-logs
+          cp ss-full/src/frontends/android/app/src/main/jni/Android.mk failure-logs/ 2>/dev/null || true
+          cp ss-full/src/frontends/android/app/src/main/jni/openssl/Android.mk failure-logs/openssl-Android.mk 2>/dev/null || true
+          find ss-full/src/frontends/android/app/build/intermediates/cxx/ -name "*.log" -exec cp {} failure-logs/ \; 2>/dev/null || true
+
+      - name: Upload failure logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-failure-logs
-          path: |
-            ss-full/src/frontends/android/app/build/intermediates/cxx/
-            ss-full/src/frontends/android/app/src/main/jni/openssl/Android.mk
-            ss-full/src/frontends/android/app/src/main/jni/Android.mk
+          path: failure-logs/
