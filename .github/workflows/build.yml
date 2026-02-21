@@ -36,13 +36,13 @@ jobs:
 
     - name: Install Gradle
       run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip
-        unzip -q gradle-8.5-bin.zip -d /opt
-        echo "/opt/gradle-8.5/bin" >> $GITHUB_PATH
+        wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip
+        unzip -q gradle-8.7-bin.zip -d /opt
+        echo "/opt/gradle-8.7/bin" >> $GITHUB_PATH
 
     - name: Generate Gradle Wrapper
       run: |
-        gradle wrapper --gradle-version 8.5 --no-configuration-cache
+        gradle wrapper --gradle-version 8.7 --no-configuration-cache
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
 
