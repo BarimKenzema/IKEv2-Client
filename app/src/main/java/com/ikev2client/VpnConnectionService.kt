@@ -5,13 +5,11 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.net.ConnectivityManager
-import android.net.Ikev2VpnProfile
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.VpnManager
 import android.os.Binder
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -19,9 +17,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.gson.Gson
 import com.ikev2client.model.VpnProfile
-import java.io.ByteArrayInputStream
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
 import java.util.Timer
 import java.util.TimerTask
 
@@ -29,9 +24,10 @@ class VpnConnectionService : Service() {
 
     companion object {
         const val TAG = "VpnService"
-        const val ACTION_CONNECT = "CONNECT"
+        const val ACTION_MONITOR = "MONITOR"
         const val ACTION_DISCONNECT = "DISCONNECT"
         const val EXTRA_PROFILE_JSON = "profile_json"
+        const val CONNECTION_TIMEOUT_MS = 20000L
 
         var isRunning = false
             private set
@@ -47,9 +43,11 @@ class VpnConnectionService : Service() {
     }
 
     private val binder = LocalBinder()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var expiryTimer: Timer? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private var timeoutRunnable: Runnable? = null
+    private var currentProfile: VpnProfile? = null
 
     inner class LocalBinder : Binder() {
         fun getService(): VpnConnectionService = this@VpnConnectionService
@@ -59,129 +57,113 @@ class VpnConnectionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_CONNECT -> {
+            ACTION_MONITOR -> {
                 val json = intent.getStringExtra(EXTRA_PROFILE_JSON)
                 if (json != null) {
                     val profile = Gson().fromJson(json, VpnProfile::class.java)
-                    startConnection(profile)
+                    startMonitoring(profile)
                 }
             }
-            ACTION_DISCONNECT -> stopConnection()
+            ACTION_DISCONNECT -> {
+                stopMonitoring()
+            }
         }
         return START_STICKY
     }
 
-    private fun startConnection(profile: VpnProfile) {
-        if (profile.isExpired()) {
-            updateState(ConnectionState.ERROR, "Profile expired")
-            stopSelf()
-            return
-        }
-
-        updateState(ConnectionState.CONNECTING, null)
+    private fun startMonitoring(profile: VpnProfile) {
+        currentProfile = profile
         currentProfileId = profile.id
         isRunning = true
+        updateState(ConnectionState.CONNECTING, null)
 
         startForeground(1, createNotification("Connecting to ${profile.name}..."))
 
-        Thread {
-            try {
-                connectIkev2(profile)
-            } catch (e: Exception) {
-                Log.e(TAG, "Connection failed", e)
-                mainHandler.post {
-                    updateState(ConnectionState.ERROR, e.message ?: "Connection failed")
-                }
-            }
-        }.start()
-    }
+        // Register network callback to detect VPN
+        registerVpnCallback()
 
-    private fun connectIkev2(profile: VpnProfile) {
-        val vpnManager = getSystemService(VpnManager::class.java)
-        if (vpnManager == null) {
-            throw Exception("VpnManager not available on this device")
-        }
-
-        // Build IKEv2 profile
-        val builder = Ikev2VpnProfile.Builder(profile.server, profile.remoteId)
-
-        // Parse CA certificate if provided
-        var caCert: X509Certificate? = null
-        if (!profile.caCert.isNullOrBlank()) {
-            try {
-                val cf = CertificateFactory.getInstance("X.509")
-                caCert = cf.generateCertificate(
-                    ByteArrayInputStream(profile.caCert.toByteArray(Charsets.UTF_8))
-                ) as X509Certificate
-                Log.d(TAG, "CA certificate parsed successfully")
-            } catch (e: Exception) {
-                Log.w(TAG, "CA cert parse failed, will use system trust store", e)
-                caCert = null
-            }
-        }
-
-        // Set authentication method
-        when (profile.authMethod) {
-            "psk" -> {
-                val pskBytes = (profile.psk ?: profile.password).toByteArray(Charsets.UTF_8)
-                builder.setAuthPsk(pskBytes)
-                Log.d(TAG, "Using PSK authentication")
-            }
-            else -> {
-                // EAP-MSCHAPv2 or other EAP methods
-                builder.setAuthUsernamePassword(
-                    profile.username,
-                    profile.password,
-                    caCert  // null = use system trust store
+        // Set connection timeout
+        timeoutRunnable = Runnable {
+            if (connectionState == ConnectionState.CONNECTING) {
+                Log.w(TAG, "Connection timeout after ${CONNECTION_TIMEOUT_MS}ms")
+                updateState(
+                    ConnectionState.ERROR,
+                    "Connection timed out. Check server address, credentials, and certificate."
                 )
-                Log.d(TAG, "Using EAP username/password authentication")
+                stopMonitoring()
             }
         }
+        mainHandler.postDelayed(timeoutRunnable!!, CONNECTION_TIMEOUT_MS)
 
-        // Set MTU
-        builder.setMaxMtu(profile.mtu)
+        // Also check immediately if VPN is already up
+        mainHandler.postDelayed({
+            if (connectionState == ConnectionState.CONNECTING && isVpnActive()) {
+                onVpnConnected()
+            }
+        }, 2000)
 
-        // Set bypassable (split tunneling)
-        builder.setBypassable(profile.splitTunneling)
-
-        // Build the profile
-        val ikev2Profile = builder.build()
-        Log.d(TAG, "IKEv2 profile built for ${profile.server}")
-
-        // Provision the profile (may show system consent dialog first time)
-        try {
-            vpnManager.provisionVpnProfile(ikev2Profile)
-            Log.d(TAG, "VPN profile provisioned successfully")
-        } catch (e: SecurityException) {
-            throw Exception("VPN consent not given. Please approve the VPN dialog and try again.")
-        }
-
-        // Start the VPN connection
-        try {
-            vpnManager.startProvisionedVpnProfile()
-            Log.d(TAG, "VPN start requested")
-        } catch (e: SecurityException) {
-            throw Exception("Cannot start VPN. Please check permissions.")
-        } catch (e: IllegalStateException) {
-            throw Exception("No VPN profile provisioned. Please try connecting again.")
-        }
-
-        // Monitor VPN connection state
-        startVpnMonitor()
-
-        // Monitor profile expiry
+        // Start expiry monitoring
         startExpiryMonitor(profile)
 
-        // Give the system a moment to establish, then check
-        mainHandler.postDelayed({
-            if (connectionState == ConnectionState.CONNECTING) {
-                // Check if VPN is actually up
-                if (isVpnActive()) {
-                    updateState(ConnectionState.CONNECTED, null)
-                    updateNotification("Connected to ${profile.name}")
+        Log.d(TAG, "Started monitoring VPN for ${profile.server}")
+    }
+
+    private fun registerVpnCallback() {
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return
+
+        // Clean up previous callback
+        networkCallback?.let {
+            try { cm.unregisterNetworkCallback(it) } catch (_: Exception) {}
+        }
+
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Log.d(TAG, "Network available: $network")
+                val caps = cm.getNetworkCapabilities(network)
+                if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
+                    mainHandler.post { onVpnConnected() }
                 }
             }
-        }, 3000)
+
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+                    if (connectionState != ConnectionState.CONNECTED) {
+                        mainHandler.post { onVpnConnected() }
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
+                Log.d(TAG, "Network lost: $network")
+                mainHandler.post {
+                    if (connectionState == ConnectionState.CONNECTED) {
+                        updateState(ConnectionState.DISCONNECTED, "VPN disconnected")
+                        stopMonitoring()
+                    }
+                }
+            }
+        }
+
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .build()
+
+        cm.registerNetworkCallback(request, networkCallback!!)
+        Log.d(TAG, "VPN network callback registered")
+    }
+
+    private fun onVpnConnected() {
+        if (connectionState == ConnectionState.CONNECTED) return
+
+        Log.d(TAG, "VPN connected!")
+
+        // Cancel timeout
+        timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        timeoutRunnable = null
+
+        updateState(ConnectionState.CONNECTED, null)
+        updateNotification("Connected to ${currentProfile?.name ?: "VPN"}")
     }
 
     private fun isVpnActive(): Boolean {
@@ -191,59 +173,6 @@ class VpnConnectionService : Service() {
         return caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
     }
 
-    private fun startVpnMonitor() {
-        val cm = getSystemService(ConnectivityManager::class.java) ?: return
-
-        // Unregister previous callback if any
-        networkCallback?.let {
-            try { cm.unregisterNetworkCallback(it) } catch (_: Exception) {}
-        }
-
-        networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                val caps = cm.getNetworkCapabilities(network)
-                if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true) {
-                    Log.d(TAG, "VPN network available")
-                    mainHandler.post {
-                        updateState(ConnectionState.CONNECTED, null)
-                        updateNotification("Connected")
-                    }
-                }
-            }
-
-            override fun onLost(network: Network) {
-                Log.d(TAG, "Network lost")
-                mainHandler.post {
-                    if (isRunning && connectionState == ConnectionState.CONNECTED) {
-                        updateState(ConnectionState.DISCONNECTED, "VPN disconnected")
-                        stopConnection()
-                    }
-                }
-            }
-
-            override fun onCapabilitiesChanged(
-                network: Network,
-                capabilities: NetworkCapabilities
-            ) {
-                if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
-                    if (connectionState != ConnectionState.CONNECTED) {
-                        mainHandler.post {
-                            updateState(ConnectionState.CONNECTED, null)
-                            updateNotification("Connected")
-                        }
-                    }
-                }
-            }
-        }
-
-        val request = NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
-            .build()
-
-        cm.registerNetworkCallback(request, networkCallback!!)
-        Log.d(TAG, "VPN network monitor registered")
-    }
-
     private fun startExpiryMonitor(profile: VpnProfile) {
         expiryTimer?.cancel()
         expiryTimer = Timer()
@@ -251,15 +180,24 @@ class VpnConnectionService : Service() {
             override fun run() {
                 if (profile.isExpired()) {
                     Log.w(TAG, "Profile expired, disconnecting")
-                    mainHandler.post { stopConnection() }
+                    mainHandler.post {
+                        updateState(ConnectionState.ERROR, "Profile expired")
+                        stopMonitoring()
+                    }
                 }
             }
         }, 30000, 30000)
     }
 
-    fun stopConnection() {
+    fun stopMonitoring() {
         updateState(ConnectionState.DISCONNECTING, null)
         isRunning = false
+
+        // Cancel timeout
+        timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        timeoutRunnable = null
+
+        // Cancel expiry timer
         expiryTimer?.cancel()
         expiryTimer = null
 
@@ -269,7 +207,7 @@ class VpnConnectionService : Service() {
                 val cm = getSystemService(ConnectivityManager::class.java)
                 cm?.unregisterNetworkCallback(it)
             } catch (e: Exception) {
-                Log.e(TAG, "Error unregistering network callback", e)
+                Log.e(TAG, "Error unregistering callback", e)
             }
         }
         networkCallback = null
@@ -278,20 +216,20 @@ class VpnConnectionService : Service() {
         try {
             val vpnManager = getSystemService(VpnManager::class.java)
             vpnManager?.stopProvisionedVpnProfile()
-            Log.d(TAG, "VPN stopped")
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping VPN", e)
         }
 
+        // Delete provisioned profile
         try {
             val vpnManager = getSystemService(VpnManager::class.java)
             vpnManager?.deleteProvisionedVpnProfile()
-            Log.d(TAG, "VPN profile deleted")
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting VPN profile", e)
         }
 
         currentProfileId = null
+        currentProfile = null
         updateState(ConnectionState.DISCONNECTED, null)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -324,7 +262,7 @@ class VpnConnectionService : Service() {
     }
 
     override fun onDestroy() {
-        stopConnection()
+        stopMonitoring()
         super.onDestroy()
     }
 }
