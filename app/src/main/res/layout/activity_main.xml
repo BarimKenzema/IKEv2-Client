@@ -3,66 +3,105 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center">
+    android:background="#F5F5F5">
 
-    <ImageView
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:src="@drawable/ic_vpn_key"
-        android:layout_marginBottom="16dp"
-        android:contentDescription="VPN Icon" />
-
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="IKEv2 VPN Client"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:background="@color/primary"
+        android:gravity="center_horizontal">
 
-    <TextView
-        android:id="@+id/tvProfileCount"
-        android:layout_width="wrap_content"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="IKEv2 VPN Client"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white" />
+
+        <TextView
+            android:id="@+id/tvConnectionStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Disconnected"
+            android:textSize="14sp"
+            android:textColor="#BBDEFB"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/tvProfileCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 active, 0 expired"
+            android:textSize="12sp"
+            android:textColor="#90CAF9"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Profiles: 0 active, 0 expired"
-        android:textSize="14sp"
-        android:textColor="#888888"
-        android:layout_marginBottom="32dp" />
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnScanQr"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="Scan QR Code"
-        android:textSize="16sp"
-        android:layout_marginBottom="12dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScanQr"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Scan QR"
+            android:textSize="13sp"
+            android:layout_marginEnd="4dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnPasteProfile"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="Paste Encrypted Profile"
-        android:textSize="16sp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_marginBottom="12dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPasteProfile"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Paste Profile"
+            android:textSize="13sp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnViewProfiles"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="View Profiles and Connect"
-        android:textSize="16sp"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_marginBottom="12dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCleanExpired"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Clean"
+            android:textSize="13sp"
+            android:layout_marginStart="4dp"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCleanExpired"
+    </LinearLayout>
+
+    <!-- Empty State -->
+    <TextView
+        android:id="@+id/tvEmpty"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="Remove Expired Profiles"
-        android:textSize="14sp"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_marginTop="8dp" />
+        android:layout_height="wrap_content"
+        android:text="No profiles yet.\nScan QR or paste an encrypted profile to get started."
+        android:textSize="15sp"
+        android:textColor="#999999"
+        android:gravity="center"
+        android:padding="48dp"
+        android:visibility="gone" />
+
+    <!-- Profile List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvProfiles"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"
+        android:clipToPadding="false" />
 
 </LinearLayout>
