@@ -66,44 +66,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
 
-    - name: Sign Release APK
+    - name: Build Release APK
       run: |
-        # Build unsigned release
         ./gradlew assembleRelease --no-build-cache --no-configuration-cache
-        
-        # Sign it with debug key for sideloading
-        APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-        if [ -n "$APK_PATH" ]; then
-          # Align the APK
-          ${ANDROID_HOME}/build-tools/34.0.0/zipalign -v -p 4 "$APK_PATH" app/build/outputs/apk/release/app-release-aligned.apk
-          
-          # Sign with debug keystore
-          ${ANDROID_HOME}/build-tools/34.0.0/apksigner sign \
-            --ks ~/.android/debug.keystore \
-            --ks-key-alias androiddebugkey \
-            --ks-pass pass:android \
-            --key-pass pass:android \
-            --out app/build/outputs/apk/release/app-release-signed.apk \
-            app/build/outputs/apk/release/app-release-aligned.apk
-          
-          echo "Signed APK created"
-        fi
-      env:
-        ANDROID_HOME: /usr/local/lib/android/sdk
-
-    - name: Verify APKs
-      run: |
-        echo "=== Debug APK ==="
-        find app/build/outputs/apk/debug -name '*.apk' -exec ls -lh {} \;
-        
-        echo "=== Release APK ==="
-        find app/build/outputs/apk/release -name '*.apk' -exec ls -lh {} \;
-        
-        # Verify debug APK signature
-        DEBUG_APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
-        if [ -n "$DEBUG_APK" ]; then
-          ${ANDROID_HOME}/build-tools/34.0.0/apksigner verify --verbose "$DEBUG_APK" && echo "Debug APK signature VALID" || echo "Debug APK signature INVALID"
-        fi
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
 
@@ -111,16 +76,10 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
-        path: app/build/outputs/apk/debug/*.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
 
-    - name: Upload Signed Release APK
+    - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
-        name: release-apk-signed
-        path: app/build/outputs/apk/release/app-release-signed.apk
-
-    - name: Upload All Release APKs
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apk-all
-        path: app/build/outputs/apk/release/*.apk
+        name: release-apk
+        path: app/build/outputs/apk/release/app-release.apk
