@@ -1,9 +1,11 @@
 package com.ikev2client
 
 import android.content.Intent
+import android.net.VpnService
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,6 +22,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var storage: ProfileStorage
     private lateinit var adapter: ProfileAdapter
+    private var pendingProfile: VpnProfile? = null
+
+    private val vpnConsentLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            pendingProfile?.let { connectToProfile(it) }
+        } else {
+            Toast.makeText(this, "VPN permission denied", Toast.LENGTH_SHORT).show()
+        }
+        pendingProfile = null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,11 +101,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onConnectClicked(profile: VpnProfile) {
+        // If already connected to this profile, disconnect
         if (VpnConnectionService.isRunning && VpnConnectionService.currentProfileId == profile.id) {
             disconnectVpn()
             return
         }
 
+        // If connected to another, disconnect first
         if (VpnConnectionService.isRunning) {
             disconnectVpn()
         }
@@ -101,7 +117,16 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        connectToProfile(profile)
+        // Step 1: Get VPN consent from user
+        val consentIntent = VpnService.prepare(this)
+        if (consentIntent != null) {
+            // System needs user to approve VPN — show dialog
+            pendingProfile = profile
+            vpnConsentLauncher.launch(consentIntent)
+        } else {
+            // Already have consent — connect directly
+            connectToProfile(profile)
+        }
     }
 
     private fun connectToProfile(profile: VpnProfile) {
