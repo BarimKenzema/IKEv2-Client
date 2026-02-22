@@ -192,55 +192,6 @@ jobs:
           echo "applicationId: $(grep applicationId app/build.gradle)"
           echo "namespace: $(grep namespace app/build.gradle)"
 
-      - name: Dump strongSwan API for debugging
-        run: |
-          cd ss-full/src/frontends/android
-          BASE="app/src/main/java/org/strongswan/android"
-
-          echo "=========================================="
-          echo "=== FULL API DUMP FOR DEBUGGING ==="
-          echo "=========================================="
-
-          echo ""
-          echo "=== StrongSwanApplication.java - ALL public methods ==="
-          grep -n "public.*(" "${BASE}/logic/StrongSwanApplication.java" 2>/dev/null | head -30
-
-          echo ""
-          echo "=== VpnProfileDataSource.java - FULL FILE ==="
-          cat "${BASE}/data/VpnProfileDataSource.java" 2>/dev/null | head -60
-
-          echo ""
-          echo "=== VpnProfileSqlDataSource.java - first 80 lines ==="
-          head -80 "${BASE}/data/VpnProfileSqlDataSource.java" 2>/dev/null
-
-          echo ""
-          echo "=== VpnProfileDetailActivity - DataSource lines ==="
-          grep -n "DataSource\|dataSource\|mDataSource\|mDao\|dao" "${BASE}/ui/VpnProfileDetailActivity.java" 2>/dev/null | head -20
-
-          echo ""
-          echo "=== VpnProfileControlActivity - DataSource lines ==="
-          grep -n "DataSource\|dataSource\|mDataSource\|mDao\|dao" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -20
-
-          echo ""
-          echo "=== VpnProfileControlActivity - constants ==="
-          grep -n "public static\|EXTRA_\|START_\|DISCONNECT" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -20
-
-          echo ""
-          echo "=== VpnProfileListFragment - DataSource lines ==="
-          grep -n "DataSource\|dataSource\|mDataSource" "${BASE}/ui/VpnProfileListFragment.java" 2>/dev/null | head -20
-
-          echo ""
-          echo "=== VpnProfile.java - all public methods ==="
-          grep -n "public " "${BASE}/data/VpnProfile.java" 2>/dev/null | head -30
-
-          echo ""
-          echo "=== VpnType.java - IKEV2 entries ==="
-          grep "IKEV2" "${BASE}/data/VpnType.java" 2>/dev/null | head -10
-
-          echo ""
-          echo "=== VpnProfileImportActivity - DataSource lines ==="
-          grep -n "DataSource\|dataSource\|mDataSource" "${BASE}/ui/VpnProfileImportActivity.java" 2>/dev/null | head -20
-
       - name: Create AsadVPN logic classes
         run: |
           cd ss-full/src/frontends/android
@@ -569,7 +520,6 @@ jobs:
               android:gravity="center_horizontal"
               android:background="#1a1a2e"
               android:padding="24dp">
-
               <TextView
                   android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
@@ -578,7 +528,6 @@ jobs:
                   android:textColor="#00d4aa"
                   android:textStyle="bold"
                   android:layout_marginTop="40dp" />
-
               <TextView
                   android:id="@+id/status_text"
                   android:layout_width="wrap_content"
@@ -587,7 +536,6 @@ jobs:
                   android:textSize="18sp"
                   android:textColor="#ffffff"
                   android:layout_marginTop="16dp" />
-
               <TextView
                   android:id="@+id/server_text"
                   android:layout_width="wrap_content"
@@ -596,7 +544,6 @@ jobs:
                   android:textSize="14sp"
                   android:textColor="#aaaaaa"
                   android:layout_marginTop="8dp" />
-
               <TextView
                   android:id="@+id/days_text"
                   android:layout_width="wrap_content"
@@ -605,7 +552,6 @@ jobs:
                   android:textSize="16sp"
                   android:textColor="#ffcc00"
                   android:layout_marginTop="16dp" />
-
               <Button
                   android:id="@+id/connect_button"
                   android:layout_width="200dp"
@@ -616,12 +562,10 @@ jobs:
                   android:textSize="20sp"
                   android:textColor="#ffffff"
                   android:textStyle="bold" />
-
               <View
                   android:layout_width="0dp"
                   android:layout_height="0dp"
                   android:layout_weight="1" />
-
               <Button
                   android:id="@+id/import_button"
                   android:layout_width="match_parent"
@@ -630,7 +574,6 @@ jobs:
                   android:textColor="#ffffff"
                   android:backgroundTint="#333355"
                   android:layout_marginBottom="8dp" />
-
               <Button
                   android:id="@+id/scan_button"
                   android:layout_width="match_parent"
@@ -706,196 +649,13 @@ jobs:
 
           echo "=== UI resources created ==="
 
-      - name: Generate AsadMainActivity from discovered API
+      - name: Create AsadMainActivity (reflection-based, no auto-discovery)
         run: |
           cd ss-full/src/frontends/android
+          ACTIVITY="app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java"
 
-          python3 << 'PYEOF'
-          import os, re
-
-          base = "app/src/main/java/org/strongswan/android"
-          activity_path = f"{base}/ui/AsadMainActivity.java"
-
-          def read_file(path):
-              try:
-                  with open(path) as f:
-                      return f.read()
-              except:
-                  return ""
-
-          # Read all relevant source files
-          detail_act = read_file(f"{base}/ui/VpnProfileDetailActivity.java")
-          control_act = read_file(f"{base}/ui/VpnProfileControlActivity.java")
-          list_frag = read_file(f"{base}/ui/VpnProfileListFragment.java")
-          import_act = read_file(f"{base}/ui/VpnProfileImportActivity.java")
-          app_java = read_file(f"{base}/logic/StrongSwanApplication.java")
-          sql_ds = read_file(f"{base}/data/VpnProfileSqlDataSource.java")
-          ds_iface = read_file(f"{base}/data/VpnProfileDataSource.java")
-          vpn_profile = read_file(f"{base}/data/VpnProfile.java")
-
-          print("=== API Discovery ===")
-
-          # ============================================================
-          # 1. Find DataSource initialization
-          # ============================================================
-          ds_init_code = ""
-          ds_close_code = ""
-          ds_extra_imports = ""
-
-          # --- Strategy A: Find a method in StrongSwanApplication that returns a DataSource ---
-          for line in app_java.split('\n'):
-              # Match: public VpnProfileDataSource getSomething()
-              # Must contain "DataSource" or "Dao" in the RETURN TYPE
-              m = re.search(r'public\s+(\w*(?:DataSource|Dao)\w*)\s+(\w+)\s*\(', line.strip())
-              if m:
-                  ret_type = m.group(1)
-                  method_name = m.group(2)
-                  ds_init_code = f'{ret_type} dataSource = ((StrongSwanApplication) getApplication()).{method_name}();'
-                  print(f"Strategy A: {ret_type} {method_name}() in StrongSwanApplication")
-                  break
-
-          # --- Strategy B: Find DataSource field init in VpnProfileDetailActivity ---
-          if not ds_init_code:
-              for src_name, src_code in [("DetailActivity", detail_act), ("ControlActivity", control_act),
-                                          ("ImportActivity", import_act), ("ListFragment", list_frag)]:
-                  # Find field: private VpnProfileDataSource mDataSource;
-                  field_name = None
-                  field_type = None
-                  for line in src_code.split('\n'):
-                      m = re.search(r'(?:private|protected)\s+(VpnProfile\w*(?:DataSource|Dao)\w*)\s+(\w+)\s*;', line)
-                      if m:
-                          field_type = m.group(1)
-                          field_name = m.group(2)
-                          break
-
-                  if field_name:
-                      # Find assignment: mDataSource = something;
-                      for line in src_code.split('\n'):
-                          stripped = line.strip()
-                          if field_name in stripped and '=' in stripped and 'import' not in stripped and 'private' not in stripped and 'protected' not in stripped:
-                              m = re.search(rf'{re.escape(field_name)}\s*=\s*(.+?)\s*;', stripped)
-                              if m:
-                                  rhs = m.group(1).strip()
-                                  # Only use if it's actually creating/getting a datasource
-                                  if ('new ' in rhs or 'DataSource' in rhs or 'Dao' in rhs or 'dao' in rhs or 'getApplication' in rhs):
-                                      # Replace 'this' with 'AsadMainActivity.this' if in anon class
-                                      ds_init_code = f'{field_type} dataSource = {rhs};'
-                                      print(f"Strategy B: from {src_name}: {field_name} = {rhs}")
-                                      break
-                  if ds_init_code:
-                      break
-
-          # --- Strategy C: Look for new VpnProfileSqlDataSource patterns ---
-          if not ds_init_code:
-              for src_name, src_code in [("DetailActivity", detail_act), ("ImportActivity", import_act)]:
-                  m = re.search(r'new\s+(VpnProfile\w*DataSource\w*)\s*\(([^)]*)\)', src_code)
-                  if m:
-                      cls = m.group(1)
-                      args = m.group(2).strip()
-                      if args:
-                          ds_init_code = f'{cls} dataSource = new {cls}(this);'
-                      else:
-                          ds_init_code = f'{cls} dataSource = new {cls}();'
-                      print(f"Strategy C: from {src_name}: new {cls}({args})")
-                      break
-
-          # --- Strategy D: Direct no-arg VpnProfileSqlDataSource ---
-          if not ds_init_code:
-              if 'class VpnProfileSqlDataSource' in sql_ds:
-                  ds_init_code = 'VpnProfileSqlDataSource dataSource = new VpnProfileSqlDataSource();'
-                  ds_extra_imports = "import org.strongswan.android.data.VpnProfileSqlDataSource;"
-                  print("Strategy D: no-arg VpnProfileSqlDataSource()")
-              else:
-                  ds_init_code = '// ERROR: Could not determine DataSource init'
-                  print("ERROR: No DataSource pattern found!")
-
-          # Check for open/close pattern
-          all_source = detail_act + import_act
-          if re.search(r'[Dd]ata[Ss]ource\w*\.open\s*\(', all_source):
-              if re.search(r'\.open\s*\(\s*\)', all_source):
-                  ds_init_code += '\n                dataSource.open();'
-                  ds_close_code = 'dataSource.close();'
-                  print("  Has open()/close()")
-              elif re.search(r'\.open\s*\(\s*this\s*\)', all_source):
-                  ds_init_code += '\n                dataSource.open(this);'
-                  ds_close_code = 'dataSource.close();'
-                  print("  Has open(this)/close()")
-
-          # ============================================================
-          # 2. Find UUID extra constant
-          # ============================================================
-          uuid_extra = '"org.strongswan.android.VPN_PROFILE_UUID"'
-          for const_name in ['EXTRA_VPN_PROFILE_UUID', 'EXTRA_VPN_PROFILE_ID', 'EXTRA_PROFILE']:
-              if const_name in control_act:
-                  uuid_extra = f'VpnProfileControlActivity.{const_name}'
-                  print(f"UUID extra: {uuid_extra}")
-                  break
-
-          # ============================================================
-          # 3. Find UUID getter
-          # ============================================================
-          uuid_getter = "getUUID()"
-          if 'public UUID getUuid()' in vpn_profile or 'getUuid()' in vpn_profile:
-              uuid_getter = "getUuid()"
-          elif 'public long getId()' in vpn_profile and 'getUUID' not in vpn_profile and 'getUuid' not in vpn_profile:
-              uuid_getter = "getId()"
-          print(f"UUID getter: {uuid_getter}")
-
-          # ============================================================
-          # 4. START_PROFILE action
-          # ============================================================
-          start_action = ""
-          if 'START_PROFILE' in control_act:
-              start_action = "vpnIntent.setAction(VpnProfileControlActivity.START_PROFILE);"
-          print(f"Start action: {start_action or 'none'}")
-
-          # ============================================================
-          # 5. Check insertProfile return type
-          # ============================================================
-          insert_returns = re.search(r'(\w+)\s+insertProfile\s*\(', sql_ds + ds_iface)
-          returns_profile = insert_returns and insert_returns.group(1) not in ('void', 'long', 'boolean') if insert_returns else True
-          print(f"insertProfile returns VpnProfile: {returns_profile}")
-
-          # Build save+launch block
-          if returns_profile:
-              save_launch = f"""{ds_init_code}
-
-                      VpnProfile profile = new VpnProfile();
-                      profile.setName("AsadVPN - " + serverAddress);
-                      profile.setGateway(serverAddress);
-                      profile.setUsername(activeProfile.username);
-                      profile.setPassword(activeProfile.password);
-                      profile.setVpnType(VpnType.IKEV2_EAP);
-
-                      VpnProfile saved = dataSource.insertProfile(profile);
-                      {ds_close_code}
-
-                      Intent vpnIntent = new Intent(this, VpnProfileControlActivity.class);
-                      {start_action}
-                      vpnIntent.putExtra({uuid_extra}, saved.{uuid_getter}.toString());
-                      startActivity(vpnIntent);"""
-          else:
-              save_launch = f"""{ds_init_code}
-
-                      VpnProfile profile = new VpnProfile();
-                      profile.setName("AsadVPN - " + serverAddress);
-                      profile.setGateway(serverAddress);
-                      profile.setUsername(activeProfile.username);
-                      profile.setPassword(activeProfile.password);
-                      profile.setVpnType(VpnType.IKEV2_EAP);
-
-                      dataSource.insertProfile(profile);
-                      {ds_close_code}
-
-                      Intent vpnIntent = new Intent(this, VpnProfileControlActivity.class);
-                      {start_action}
-                      vpnIntent.putExtra({uuid_extra}, profile.{uuid_getter}.toString());
-                      startActivity(vpnIntent);"""
-
-          # ============================================================
-          # WRITE THE JAVA FILE
-          # ============================================================
-          java_code = f'''package org.strongswan.android.ui;
+          cat > "${ACTIVITY}" << 'JAVAEOF'
+          package org.strongswan.android.ui;
 
           import android.app.Activity;
           import android.app.AlertDialog;
@@ -918,7 +678,6 @@ jobs:
           import org.strongswan.android.data.VpnProfile;
           import org.strongswan.android.data.VpnProfileDataSource;
           import org.strongswan.android.data.VpnType;
-          {ds_extra_imports}
           import org.strongswan.android.logic.CharonVpnService;
           import org.strongswan.android.logic.FastServerSelector;
           import org.strongswan.android.logic.ProfileCrypto;
@@ -927,7 +686,7 @@ jobs:
           import org.strongswan.android.logic.VpnStateService;
           import org.strongswan.android.logic.VpnStateService.State;
 
-          public class AsadMainActivity extends Activity implements VpnStateService.VpnStateListener {{
+          public class AsadMainActivity extends Activity implements VpnStateService.VpnStateListener {
               private static final String TAG = "AsadVPN";
               private static final int VPN_REQUEST_CODE = 100;
               private static final int QR_REQUEST_CODE = 200;
@@ -944,21 +703,21 @@ jobs:
               private VpnStateService mService;
               private String pendingServer;
 
-              private final ServiceConnection mServiceConnection = new ServiceConnection() {{
+              private final ServiceConnection mServiceConnection = new ServiceConnection() {
                   @Override
-                  public void onServiceConnected(ComponentName name, IBinder binder) {{
+                  public void onServiceConnected(ComponentName name, IBinder binder) {
                       mService = ((VpnStateService.LocalBinder) binder).getService();
                       mService.registerListener(AsadMainActivity.this);
                       refreshUI();
-                  }}
+                  }
                   @Override
-                  public void onServiceDisconnected(ComponentName name) {{
+                  public void onServiceDisconnected(ComponentName name) {
                       mService = null;
-                  }}
-              }};
+                  }
+              };
 
               @Override
-              protected void onCreate(Bundle savedInstanceState) {{
+              protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_asadvpn_main);
 
@@ -978,47 +737,47 @@ jobs:
                   bindService(new Intent(this, VpnStateService.class),
                       mServiceConnection, BIND_AUTO_CREATE);
 
-                  profileManager.checkForUpdates(new ProfileManager.UpdateCallback() {{
+                  profileManager.checkForUpdates(new ProfileManager.UpdateCallback() {
                       @Override
-                      public void onUpdated(ProfileCrypto.ProfileData newData) {{
-                          runOnUiThread(() -> {{
+                      public void onUpdated(ProfileCrypto.ProfileData newData) {
+                          runOnUiThread(() -> {
                               activeProfile = newData;
                               refreshUI();
                               Toast.makeText(AsadMainActivity.this,
                                   "Server list updated!", Toast.LENGTH_SHORT).show();
-                          }});
-                      }}
+                          });
+                      }
                       @Override
-                      public void onError(Exception e) {{
+                      public void onError(Exception e) {
                           Log.w(TAG, "Update check failed: " + e.getMessage());
-                      }}
-                  }});
-              }}
+                      }
+                  });
+              }
 
               @Override
-              protected void onDestroy() {{
+              protected void onDestroy() {
                   super.onDestroy();
-                  if (mService != null) {{
+                  if (mService != null) {
                       mService.unregisterListener(this);
-                  }}
-                  try {{ unbindService(mServiceConnection); }} catch (Exception ignored) {{}}
-              }}
+                  }
+                  try { unbindService(mServiceConnection); } catch (Exception ignored) {}
+              }
 
               @Override
-              protected void onResume() {{
+              protected void onResume() {
                   super.onResume();
                   refreshUI();
-              }}
+              }
 
               @Override
-              public void stateChanged() {{
+              public void stateChanged() {
                   runOnUiThread(this::refreshUI);
-              }}
+              }
 
-              private void refreshUI() {{
+              private void refreshUI() {
                   activeProfile = profileManager.getActiveProfile();
 
-                  if (activeProfile == null) {{
+                  if (activeProfile == null) {
                       statusText.setText("No Profile");
                       daysText.setText("Import a profile to get started");
                       serverText.setText("");
@@ -1026,9 +785,9 @@ jobs:
                       connectButton.setEnabled(true);
                       connectButton.setBackgroundResource(R.drawable.circle_button_connect);
                       return;
-                  }}
+                  }
 
-                  if (activeProfile.isExpired()) {{
+                  if (activeProfile.isExpired()) {
                       statusText.setText("Profile Expired");
                       daysText.setText("0 days remaining");
                       serverText.setText("");
@@ -1037,14 +796,14 @@ jobs:
                       connectButton.setBackgroundResource(R.drawable.circle_button_connect);
                       showExpiredDialog();
                       return;
-                  }}
+                  }
 
                   int days = activeProfile.remainingDays();
                   daysText.setText(days + " day" + (days != 1 ? "s" : "") + " remaining");
 
                   State state = (mService != null) ? mService.getState() : State.DISABLED;
 
-                  switch (state) {{
+                  switch (state) {
                       case CONNECTED:
                           statusText.setText("Connected");
                           connectButton.setText("DISCONNECT");
@@ -1068,167 +827,248 @@ jobs:
                           connectButton.setEnabled(true);
                           serverText.setText(activeProfile.servers.length + " servers available");
                           break;
-                  }}
-              }}
+                  }
+              }
 
-              private void onConnectClicked() {{
-                  if (activeProfile == null) {{
+              private void onConnectClicked() {
+                  if (activeProfile == null) {
                       showImportDialog();
                       return;
-                  }}
-                  if (activeProfile.isExpired()) {{
+                  }
+                  if (activeProfile.isExpired()) {
                       showExpiredDialog();
                       return;
-                  }}
+                  }
 
                   State state = (mService != null) ? mService.getState() : State.DISABLED;
-                  if (state == State.CONNECTED || state == State.CONNECTING) {{
+                  if (state == State.CONNECTED || state == State.CONNECTING) {
                       disconnect();
-                  }} else {{
+                  } else {
                       connect();
-                  }}
-              }}
+                  }
+              }
 
-              private void connect() {{
+              private void connect() {
                   statusText.setText("Finding best server...");
                   connectButton.setEnabled(false);
 
-                  new Thread(() -> {{
+                  new Thread(() -> {
                       FastServerSelector.ServerResult fastest =
                           FastServerSelector.findFastest(activeProfile.servers, activeProfile.serverNames);
 
-                      if (fastest == null) {{
-                          runOnUiThread(() -> {{
+                      if (fastest == null) {
+                          runOnUiThread(() -> {
                               refreshUI();
                               Toast.makeText(AsadMainActivity.this, "No servers available", Toast.LENGTH_SHORT).show();
-                          }});
+                          });
                           return;
-                      }}
+                      }
 
-                      runOnUiThread(() -> {{
+                      runOnUiThread(() -> {
                           serverText.setText("> " + fastest.name);
                           pendingServer = fastest.address;
                           Intent intent = VpnService.prepare(AsadMainActivity.this);
-                          if (intent != null) {{
+                          if (intent != null) {
                               startActivityForResult(intent, VPN_REQUEST_CODE);
-                          }} else {{
+                          } else {
                               launchVpn(fastest.address);
-                          }}
-                      }});
-                  }}).start();
-              }}
+                          }
+                      });
+                  }).start();
+              }
 
               @Override
-              protected void onActivityResult(int requestCode, int resultCode, Intent data) {{
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
                   super.onActivityResult(requestCode, resultCode, data);
-                  if (requestCode == VPN_REQUEST_CODE) {{
-                      if (resultCode == RESULT_OK && pendingServer != null) {{
+                  if (requestCode == VPN_REQUEST_CODE) {
+                      if (resultCode == RESULT_OK && pendingServer != null) {
                           launchVpn(pendingServer);
-                      }} else {{
+                      } else {
                           refreshUI();
-                      }}
-                  }} else if (requestCode == QR_REQUEST_CODE && resultCode == RESULT_OK && data != null) {{
+                      }
+                  } else if (requestCode == QR_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
                       String scanned = data.getStringExtra("SCAN_RESULT");
-                      if (scanned != null && !scanned.isEmpty()) {{
+                      if (scanned != null && !scanned.isEmpty()) {
                           importProfile(scanned);
-                      }}
-                  }}
-              }}
+                      }
+                  }
+              }
 
-              private void launchVpn(String serverAddress) {{
-                  try {{
-                      {save_launch}
+              /**
+               * Get DataSource using reflection - avoids compile-time dependency on
+               * concrete class names that vary between strongSwan versions.
+               */
+              private VpnProfileDataSource findDataSource() {
+                  try {
+                      Object app = getApplication();
+                      // Search all public no-arg methods that return a VpnProfileDataSource
+                      for (java.lang.reflect.Method method : app.getClass().getMethods()) {
+                          if (method.getParameterTypes().length == 0) {
+                              Class<?> ret = method.getReturnType();
+                              if (VpnProfileDataSource.class.isAssignableFrom(ret)) {
+                                  Object result = method.invoke(app);
+                                  if (result instanceof VpnProfileDataSource) {
+                                      Log.d(TAG, "DataSource via " + method.getName());
+                                      return (VpnProfileDataSource) result;
+                                  }
+                              }
+                          }
+                      }
+                  } catch (Exception e) {
+                      Log.e(TAG, "Reflection DataSource lookup failed", e);
+                  }
+                  return null;
+              }
 
-                  }} catch (Exception e) {{
+              /**
+               * Get the profile UUID extra key using reflection.
+               */
+              private String findProfileExtraKey() {
+                  String[] candidates = {
+                      "EXTRA_VPN_PROFILE_UUID",
+                      "EXTRA_VPN_PROFILE_ID",
+                      "EXTRA_PROFILE"
+                  };
+                  for (String name : candidates) {
+                      try {
+                          java.lang.reflect.Field f = VpnProfileControlActivity.class.getField(name);
+                          Object val = f.get(null);
+                          if (val instanceof String) {
+                              return (String) val;
+                          }
+                      } catch (Exception ignored) {}
+                  }
+                  return "org.strongswan.android.VPN_PROFILE_UUID";
+              }
+
+              /**
+               * Get the profile identifier as a string using reflection.
+               */
+              private String getProfileId(VpnProfile profile) {
+                  String[] getters = {"getUUID", "getUuid", "getId"};
+                  for (String name : getters) {
+                      try {
+                          java.lang.reflect.Method m = profile.getClass().getMethod(name);
+                          Object result = m.invoke(profile);
+                          if (result != null) {
+                              return result.toString();
+                          }
+                      } catch (Exception ignored) {}
+                  }
+                  return java.util.UUID.randomUUID().toString();
+              }
+
+              private void launchVpn(String serverAddress) {
+                  try {
+                      VpnProfileDataSource dataSource = findDataSource();
+                      if (dataSource == null) {
+                          Toast.makeText(this, "Database unavailable", Toast.LENGTH_LONG).show();
+                          refreshUI();
+                          return;
+                      }
+
+                      VpnProfile profile = new VpnProfile();
+                      profile.setName("AsadVPN - " + serverAddress);
+                      profile.setGateway(serverAddress);
+                      profile.setUsername(activeProfile.username);
+                      profile.setPassword(activeProfile.password);
+                      profile.setVpnType(VpnType.IKEV2_EAP);
+
+                      dataSource.insertProfile(profile);
+
+                      String extraKey = findProfileExtraKey();
+                      String profileId = getProfileId(profile);
+
+                      Intent vpnIntent = new Intent(this, VpnProfileControlActivity.class);
+                      vpnIntent.putExtra(extraKey, profileId);
+                      startActivity(vpnIntent);
+
+                  } catch (Exception e) {
                       Log.e(TAG, "Failed to start VPN", e);
                       Toast.makeText(this, "Connection failed: " + e.getMessage(),
                           Toast.LENGTH_LONG).show();
                       refreshUI();
-                  }}
-              }}
+                  }
+              }
 
-              private void disconnect() {{
-                  if (mService != null) {{
+              private void disconnect() {
+                  if (mService != null) {
                       mService.disconnect();
-                  }}
-              }}
+                  }
+              }
 
-              private void showImportDialog() {{
+              private void showImportDialog() {
                   View dialogView = getLayoutInflater().inflate(R.layout.dialog_import_profile, null);
                   EditText input = dialogView.findViewById(R.id.profile_input);
 
                   new AlertDialog.Builder(this)
                       .setTitle("Import Profile")
                       .setView(dialogView)
-                      .setPositiveButton("Import", (dialog, which) -> {{
+                      .setPositiveButton("Import", (dialog, which) -> {
                           String text = input.getText().toString().trim();
-                          if (!text.isEmpty()) {{
+                          if (!text.isEmpty()) {
                               importProfile(text);
-                          }} else {{
+                          } else {
                               Toast.makeText(this, "Please paste a profile code",
                                   Toast.LENGTH_SHORT).show();
-                          }}
-                      }})
+                          }
+                      })
                       .setNegativeButton("Cancel", null)
                       .show();
-              }}
+              }
 
-              private void importProfile(String encryptedData) {{
-                  try {{
+              private void importProfile(String encryptedData) {
+                  try {
                       activeProfile = profileManager.importProfile(encryptedData);
-                      if (activeProfile.isExpired()) {{
+                      if (activeProfile.isExpired()) {
                           showExpiredDialog();
                           return;
-                      }}
+                      }
                       Toast.makeText(this, "Profile imported! " +
                           activeProfile.servers.length + " servers, " +
                           activeProfile.remainingDays() + " days remaining",
                           Toast.LENGTH_LONG).show();
                       refreshUI();
-                  }} catch (Exception e) {{
+                  } catch (Exception e) {
                       Log.e(TAG, "Import failed", e);
                       Toast.makeText(this, "Invalid profile code: " + e.getMessage(),
                           Toast.LENGTH_LONG).show();
-                  }}
-              }}
+                  }
+              }
 
-              private void startQrScanner() {{
-                  try {{
+              private void startQrScanner() {
+                  try {
                       Intent intent = new Intent("com.google.zxing.client.android.SCAN");
                       intent.putExtra("SCAN_MODE", "QR_CODE_MODE");
                       startActivityForResult(intent, QR_REQUEST_CODE);
-                  }} catch (Exception e) {{
+                  } catch (Exception e) {
                       Toast.makeText(this,
                           "Please install a QR scanner app, or paste the code manually",
                           Toast.LENGTH_LONG).show();
-                  }}
-              }}
+                  }
+              }
 
-              private void showExpiredDialog() {{
+              private void showExpiredDialog() {
                   new AlertDialog.Builder(this)
                       .setTitle("Subscription Expired")
                       .setMessage("Your VPN subscription has expired. To renew, please contact support.")
-                      .setPositiveButton("Contact Support", (dialog, which) -> {{
+                      .setPositiveButton("Contact Support", (dialog, which) -> {
                           startActivity(new Intent(Intent.ACTION_VIEW,
                               Uri.parse("https://t.me/vpnproxytestsupport")));
-                      }})
+                      })
                       .setNegativeButton("Close", null)
                       .setCancelable(false)
                       .show();
-              }}
-          }}
-          '''
+              }
+          }
+          JAVAEOF
 
-          with open(activity_path, 'w') as f:
-              f.write(java_code)
-
-          print(f"\nAsadMainActivity.java written ({os.path.getsize(activity_path)} bytes, {len(java_code.splitlines())} lines)")
-
-          PYEOF
-
+          echo "=== AsadMainActivity.java created ==="
+          echo "Lines: $(wc -l < ${ACTIVITY})"
+          echo "Size: $(wc -c < ${ACTIVITY}) bytes"
           echo ""
-          echo "=== Verify generated launchVpn method ==="
-          sed -n '/private void launchVpn/,/^    }/p' app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
+          echo "--- launchVpn method ---"
+          sed -n '/private void launchVpn/,/^        }/p' "${ACTIVITY}"
 
       - name: Patch AndroidManifest for AsadVPN launcher
         run: |
@@ -1271,7 +1111,7 @@ jobs:
           grep "namespace" app/build.gradle
           echo "--- Launcher ---"
           grep -B1 -A1 "LAUNCHER" app/src/main/AndroidManifest.xml
-          echo "--- Custom files exist ---"
+          echo "--- Custom files ---"
           ls -la app/src/main/java/org/strongswan/android/logic/ProfileCrypto.java
           ls -la app/src/main/java/org/strongswan/android/logic/ProfileManager.java
           ls -la app/src/main/java/org/strongswan/android/logic/FastServerSelector.java
