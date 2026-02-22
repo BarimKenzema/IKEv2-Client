@@ -192,75 +192,54 @@ jobs:
           echo "applicationId: $(grep applicationId app/build.gradle)"
           echo "namespace: $(grep namespace app/build.gradle)"
 
-      - name: Discover strongSwan Java API
+      - name: Dump strongSwan API for debugging
         run: |
           cd ss-full/src/frontends/android
           BASE="app/src/main/java/org/strongswan/android"
 
-          echo "============================================"
-          echo "=== strongSwan Java API Discovery ==="
-          echo "============================================"
+          echo "=========================================="
+          echo "=== FULL API DUMP FOR DEBUGGING ==="
+          echo "=========================================="
 
           echo ""
-          echo "--- VpnProfileDataSource class type ---"
-          head -5 "${BASE}/data/VpnProfileDataSource.java"
+          echo "=== StrongSwanApplication.java - ALL public methods ==="
+          grep -n "public.*(" "${BASE}/logic/StrongSwanApplication.java" 2>/dev/null | head -30
 
           echo ""
-          echo "--- VpnProfileSqlDataSource class ---"
-          head -10 "${BASE}/data/VpnProfileSqlDataSource.java" 2>/dev/null || echo "NOT FOUND"
+          echo "=== VpnProfileDataSource.java - FULL FILE ==="
+          cat "${BASE}/data/VpnProfileDataSource.java" 2>/dev/null | head -60
 
           echo ""
-          echo "--- All constructors in DataSource files ---"
-          grep -n "public.*VpnProfile.*DataSource\|VpnProfileSqlDataSource(" \
-            "${BASE}/data/VpnProfileSqlDataSource.java" \
-            "${BASE}/data/VpnProfileDataSource.java" \
-            2>/dev/null | head -10
+          echo "=== VpnProfileSqlDataSource.java - first 80 lines ==="
+          head -80 "${BASE}/data/VpnProfileSqlDataSource.java" 2>/dev/null
 
           echo ""
-          echo "--- How VpnProfileDetailActivity uses DataSource ---"
-          grep -n "DataSource\|dataSource\|mDataSource" "${BASE}/ui/VpnProfileDetailActivity.java" 2>/dev/null | head -20
+          echo "=== VpnProfileDetailActivity - DataSource lines ==="
+          grep -n "DataSource\|dataSource\|mDataSource\|mDao\|dao" "${BASE}/ui/VpnProfileDetailActivity.java" 2>/dev/null | head -20
 
           echo ""
-          echo "--- How VpnProfileControlActivity uses DataSource ---"
-          grep -n "DataSource\|dataSource\|mDataSource" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -20
+          echo "=== VpnProfileControlActivity - DataSource lines ==="
+          grep -n "DataSource\|dataSource\|mDataSource\|mDao\|dao" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -20
 
           echo ""
-          echo "--- How VpnProfileListFragment uses DataSource ---"
+          echo "=== VpnProfileControlActivity - constants ==="
+          grep -n "public static\|EXTRA_\|START_\|DISCONNECT" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -20
+
+          echo ""
+          echo "=== VpnProfileListFragment - DataSource lines ==="
           grep -n "DataSource\|dataSource\|mDataSource" "${BASE}/ui/VpnProfileListFragment.java" 2>/dev/null | head -20
 
           echo ""
-          echo "--- StrongSwanApplication DataSource methods ---"
-          grep -n "DataSource\|dataSource" "${BASE}/logic/StrongSwanApplication.java" 2>/dev/null | head -20
+          echo "=== VpnProfile.java - all public methods ==="
+          grep -n "public " "${BASE}/data/VpnProfile.java" 2>/dev/null | head -30
 
           echo ""
-          echo "--- VpnProfileControlActivity constants ---"
-          grep "public static.*final.*String\|EXTRA_\|START_" "${BASE}/ui/VpnProfileControlActivity.java" 2>/dev/null | head -10
-
-          echo ""
-          echo "--- VpnProfile getUUID/getId ---"
-          grep "getUUID\|getUuid\|getId\|public.*UUID\|public.*uuid\|public long" "${BASE}/data/VpnProfile.java" 2>/dev/null | head -10
-
-          echo ""
-          echo "--- VpnProfile setters ---"
-          grep "public void set" "${BASE}/data/VpnProfile.java" 2>/dev/null | head -15
-
-          echo ""
-          echo "--- VpnType IKEV2 values ---"
+          echo "=== VpnType.java - IKEV2 entries ==="
           grep "IKEV2" "${BASE}/data/VpnType.java" 2>/dev/null | head -10
 
           echo ""
-          echo "--- insertProfile method ---"
-          grep -A5 "insertProfile\|public.*insert" \
-            "${BASE}/data/VpnProfileSqlDataSource.java" \
-            "${BASE}/data/VpnProfileDataSource.java" \
-            2>/dev/null | head -15
-
-          echo ""
-          echo "--- Hilt/DI annotations ---"
-          grep "@Inject\|@Dao\|@Database\|@Singleton\|@Provides\|@AndroidEntryPoint" \
-            "${BASE}/data/VpnProfileSqlDataSource.java" \
-            "${BASE}/logic/StrongSwanApplication.java" \
-            2>/dev/null | head -10
+          echo "=== VpnProfileImportActivity - DataSource lines ==="
+          grep -n "DataSource\|dataSource\|mDataSource" "${BASE}/ui/VpnProfileImportActivity.java" 2>/dev/null | head -20
 
       - name: Create AsadVPN logic classes
         run: |
@@ -730,11 +709,9 @@ jobs:
       - name: Generate AsadMainActivity from discovered API
         run: |
           cd ss-full/src/frontends/android
-          BASE="app/src/main/java/org/strongswan/android"
 
-          # Use Python for the entire generation to avoid ALL shell escaping issues
           python3 << 'PYEOF'
-          import os, re, glob
+          import os, re
 
           base = "app/src/main/java/org/strongswan/android"
           activity_path = f"{base}/ui/AsadMainActivity.java"
@@ -746,104 +723,142 @@ jobs:
               except:
                   return ""
 
-          def grep_file(path, pattern):
-              content = read_file(path)
-              return [line.strip() for line in content.split('\n') if re.search(pattern, line)]
-
-          # === DISCOVER API ===
-          print("=== Discovering strongSwan API ===")
-
+          # Read all relevant source files
           detail_act = read_file(f"{base}/ui/VpnProfileDetailActivity.java")
           control_act = read_file(f"{base}/ui/VpnProfileControlActivity.java")
           list_frag = read_file(f"{base}/ui/VpnProfileListFragment.java")
+          import_act = read_file(f"{base}/ui/VpnProfileImportActivity.java")
           app_java = read_file(f"{base}/logic/StrongSwanApplication.java")
           sql_ds = read_file(f"{base}/data/VpnProfileSqlDataSource.java")
           ds_iface = read_file(f"{base}/data/VpnProfileDataSource.java")
           vpn_profile = read_file(f"{base}/data/VpnProfile.java")
 
-          # 1. How does existing code get DataSource?
+          print("=== API Discovery ===")
+
+          # ============================================================
+          # 1. Find DataSource initialization
+          # ============================================================
           ds_init_code = ""
           ds_close_code = ""
-          ds_imports = []
+          ds_extra_imports = ""
 
-          # Check for Application getter pattern
-          app_getter_match = re.search(r'\(\(StrongSwanApplication\)\s*getApplication\(\)\)\.\w+\(\)', detail_act)
-          if not app_getter_match:
-              app_getter_match = re.search(r'\(\(StrongSwanApplication\)\s*getApplication\(\)\)\.\w+\(\)', control_act)
-          if not app_getter_match:
-              app_getter_match = re.search(r'\(\(StrongSwanApplication\)\s*getApplication\(\)\)\.\w+\(\)', list_frag)
-
-          if app_getter_match:
-              getter = app_getter_match.group(0)
-              print(f"  Found app getter: {getter}")
-              ds_init_code = f"VpnProfileDataSource dataSource = {getter};"
-              ds_close_code = ""
-              ds_imports.append("import org.strongswan.android.logic.StrongSwanApplication;")
-          else:
-              # Check for direct new with context
-              ctx_match = re.search(r'new VpnProfile\w*DataSource\(([^)]+)\)', detail_act)
-              if ctx_match:
-                  arg = ctx_match.group(1).strip()
-                  cls_match = re.search(r'new (VpnProfile\w*DataSource)', detail_act)
-                  cls_name = cls_match.group(1) if cls_match else "VpnProfileDataSource"
-                  print(f"  Found context constructor: new {cls_name}({arg})")
-                  ds_init_code = f"{cls_name} dataSource = new {cls_name}(this);"
-                  # Check if open() is called
-                  if 'dataSource.open()' in detail_act or '.open()' in detail_act:
-                      ds_init_code += "\n                dataSource.open();"
-                      ds_close_code = "dataSource.close();"
-              else:
-                  # No-arg constructor
-                  print("  Using no-arg constructor pattern")
-                  if 'class VpnProfileSqlDataSource' in sql_ds:
-                      ds_init_code = "VpnProfileSqlDataSource dataSource = new VpnProfileSqlDataSource();"
-                      ds_imports.append("import org.strongswan.android.data.VpnProfileSqlDataSource;")
-                  else:
-                      ds_init_code = "VpnProfileDataSource dataSource = new VpnProfileDataSource();"
-
-                  # Check for open with context
-                  if re.search(r'void open\s*\(Context', sql_ds) or re.search(r'void open\s*\(Context', ds_iface):
-                      ds_init_code += "\n                dataSource.open(this);"
-                      ds_close_code = "dataSource.close();"
-                  elif re.search(r'void open\s*\(\)', sql_ds) or re.search(r'void open\s*\(\)', ds_iface):
-                      ds_init_code += "\n                dataSource.open();"
-                      ds_close_code = "dataSource.close();"
-
-          print(f"  DS init: {ds_init_code}")
-          print(f"  DS close: {ds_close_code}")
-
-          # 2. UUID extra constant
-          uuid_extra = '"org.strongswan.android.VPN_PROFILE_UUID"'
-          for const_name in ['EXTRA_VPN_PROFILE_UUID', 'EXTRA_VPN_PROFILE_ID']:
-              if const_name in control_act:
-                  uuid_extra = f"VpnProfileControlActivity.{const_name}"
+          # --- Strategy A: Find a method in StrongSwanApplication that returns a DataSource ---
+          for line in app_java.split('\n'):
+              # Match: public VpnProfileDataSource getSomething()
+              # Must contain "DataSource" or "Dao" in the RETURN TYPE
+              m = re.search(r'public\s+(\w*(?:DataSource|Dao)\w*)\s+(\w+)\s*\(', line.strip())
+              if m:
+                  ret_type = m.group(1)
+                  method_name = m.group(2)
+                  ds_init_code = f'{ret_type} dataSource = ((StrongSwanApplication) getApplication()).{method_name}();'
+                  print(f"Strategy A: {ret_type} {method_name}() in StrongSwanApplication")
                   break
-          print(f"  UUID extra: {uuid_extra}")
 
-          # 3. UUID getter on VpnProfile
+          # --- Strategy B: Find DataSource field init in VpnProfileDetailActivity ---
+          if not ds_init_code:
+              for src_name, src_code in [("DetailActivity", detail_act), ("ControlActivity", control_act),
+                                          ("ImportActivity", import_act), ("ListFragment", list_frag)]:
+                  # Find field: private VpnProfileDataSource mDataSource;
+                  field_name = None
+                  field_type = None
+                  for line in src_code.split('\n'):
+                      m = re.search(r'(?:private|protected)\s+(VpnProfile\w*(?:DataSource|Dao)\w*)\s+(\w+)\s*;', line)
+                      if m:
+                          field_type = m.group(1)
+                          field_name = m.group(2)
+                          break
+
+                  if field_name:
+                      # Find assignment: mDataSource = something;
+                      for line in src_code.split('\n'):
+                          stripped = line.strip()
+                          if field_name in stripped and '=' in stripped and 'import' not in stripped and 'private' not in stripped and 'protected' not in stripped:
+                              m = re.search(rf'{re.escape(field_name)}\s*=\s*(.+?)\s*;', stripped)
+                              if m:
+                                  rhs = m.group(1).strip()
+                                  # Only use if it's actually creating/getting a datasource
+                                  if ('new ' in rhs or 'DataSource' in rhs or 'Dao' in rhs or 'dao' in rhs or 'getApplication' in rhs):
+                                      # Replace 'this' with 'AsadMainActivity.this' if in anon class
+                                      ds_init_code = f'{field_type} dataSource = {rhs};'
+                                      print(f"Strategy B: from {src_name}: {field_name} = {rhs}")
+                                      break
+                  if ds_init_code:
+                      break
+
+          # --- Strategy C: Look for new VpnProfileSqlDataSource patterns ---
+          if not ds_init_code:
+              for src_name, src_code in [("DetailActivity", detail_act), ("ImportActivity", import_act)]:
+                  m = re.search(r'new\s+(VpnProfile\w*DataSource\w*)\s*\(([^)]*)\)', src_code)
+                  if m:
+                      cls = m.group(1)
+                      args = m.group(2).strip()
+                      if args:
+                          ds_init_code = f'{cls} dataSource = new {cls}(this);'
+                      else:
+                          ds_init_code = f'{cls} dataSource = new {cls}();'
+                      print(f"Strategy C: from {src_name}: new {cls}({args})")
+                      break
+
+          # --- Strategy D: Direct no-arg VpnProfileSqlDataSource ---
+          if not ds_init_code:
+              if 'class VpnProfileSqlDataSource' in sql_ds:
+                  ds_init_code = 'VpnProfileSqlDataSource dataSource = new VpnProfileSqlDataSource();'
+                  ds_extra_imports = "import org.strongswan.android.data.VpnProfileSqlDataSource;"
+                  print("Strategy D: no-arg VpnProfileSqlDataSource()")
+              else:
+                  ds_init_code = '// ERROR: Could not determine DataSource init'
+                  print("ERROR: No DataSource pattern found!")
+
+          # Check for open/close pattern
+          all_source = detail_act + import_act
+          if re.search(r'[Dd]ata[Ss]ource\w*\.open\s*\(', all_source):
+              if re.search(r'\.open\s*\(\s*\)', all_source):
+                  ds_init_code += '\n                dataSource.open();'
+                  ds_close_code = 'dataSource.close();'
+                  print("  Has open()/close()")
+              elif re.search(r'\.open\s*\(\s*this\s*\)', all_source):
+                  ds_init_code += '\n                dataSource.open(this);'
+                  ds_close_code = 'dataSource.close();'
+                  print("  Has open(this)/close()")
+
+          # ============================================================
+          # 2. Find UUID extra constant
+          # ============================================================
+          uuid_extra = '"org.strongswan.android.VPN_PROFILE_UUID"'
+          for const_name in ['EXTRA_VPN_PROFILE_UUID', 'EXTRA_VPN_PROFILE_ID', 'EXTRA_PROFILE']:
+              if const_name in control_act:
+                  uuid_extra = f'VpnProfileControlActivity.{const_name}'
+                  print(f"UUID extra: {uuid_extra}")
+                  break
+
+          # ============================================================
+          # 3. Find UUID getter
+          # ============================================================
           uuid_getter = "getUUID()"
-          if 'getUuid()' in vpn_profile and 'getUUID()' not in vpn_profile:
+          if 'public UUID getUuid()' in vpn_profile or 'getUuid()' in vpn_profile:
               uuid_getter = "getUuid()"
-          elif 'getId()' in vpn_profile and 'getUUID' not in vpn_profile and 'getUuid' not in vpn_profile:
+          elif 'public long getId()' in vpn_profile and 'getUUID' not in vpn_profile and 'getUuid' not in vpn_profile:
               uuid_getter = "getId()"
-          print(f"  UUID getter: {uuid_getter}")
+          print(f"UUID getter: {uuid_getter}")
 
+          # ============================================================
           # 4. START_PROFILE action
+          # ============================================================
           start_action = ""
           if 'START_PROFILE' in control_act:
               start_action = "vpnIntent.setAction(VpnProfileControlActivity.START_PROFILE);"
-          print(f"  Start action: {start_action or 'none'}")
+          print(f"Start action: {start_action or 'none'}")
 
-          # 5. insertProfile return type
-          insert_returns_profile = 'VpnProfile' in (re.findall(r'(VpnProfile|long|void|boolean)\s+insertProfile', sql_ds + ds_iface) or ['VpnProfile'])[0]
-          print(f"  insertProfile returns VpnProfile: {insert_returns_profile}")
+          # ============================================================
+          # 5. Check insertProfile return type
+          # ============================================================
+          insert_returns = re.search(r'(\w+)\s+insertProfile\s*\(', sql_ds + ds_iface)
+          returns_profile = insert_returns and insert_returns.group(1) not in ('void', 'long', 'boolean') if insert_returns else True
+          print(f"insertProfile returns VpnProfile: {returns_profile}")
 
-          # Build extra imports string
-          extra_imports = "\n".join(ds_imports)
-
-          # Build the save+launch block
-          if insert_returns_profile:
-              save_block = f"""{ds_init_code}
+          # Build save+launch block
+          if returns_profile:
+              save_launch = f"""{ds_init_code}
 
                       VpnProfile profile = new VpnProfile();
                       profile.setName("AsadVPN - " + serverAddress);
@@ -860,7 +875,7 @@ jobs:
                       vpnIntent.putExtra({uuid_extra}, saved.{uuid_getter}.toString());
                       startActivity(vpnIntent);"""
           else:
-              save_block = f"""{ds_init_code}
+              save_launch = f"""{ds_init_code}
 
                       VpnProfile profile = new VpnProfile();
                       profile.setName("AsadVPN - " + serverAddress);
@@ -877,8 +892,10 @@ jobs:
                       vpnIntent.putExtra({uuid_extra}, profile.{uuid_getter}.toString());
                       startActivity(vpnIntent);"""
 
-          # === WRITE THE ACTIVITY ===
-          activity_code = f'''package org.strongswan.android.ui;
+          # ============================================================
+          # WRITE THE JAVA FILE
+          # ============================================================
+          java_code = f'''package org.strongswan.android.ui;
 
           import android.app.Activity;
           import android.app.AlertDialog;
@@ -901,7 +918,7 @@ jobs:
           import org.strongswan.android.data.VpnProfile;
           import org.strongswan.android.data.VpnProfileDataSource;
           import org.strongswan.android.data.VpnType;
-          {extra_imports}
+          {ds_extra_imports}
           import org.strongswan.android.logic.CharonVpnService;
           import org.strongswan.android.logic.FastServerSelector;
           import org.strongswan.android.logic.ProfileCrypto;
@@ -1120,7 +1137,7 @@ jobs:
 
               private void launchVpn(String serverAddress) {{
                   try {{
-                      {save_block}
+                      {save_launch}
 
                   }} catch (Exception e) {{
                       Log.e(TAG, "Failed to start VPN", e);
@@ -1203,39 +1220,15 @@ jobs:
           '''
 
           with open(activity_path, 'w') as f:
-              f.write(activity_code)
+              f.write(java_code)
 
-          print(f"AsadMainActivity.java written to {activity_path}")
-          print(f"File size: {os.path.getsize(activity_path)} bytes")
-
-          # Verify no issues
-          with open(activity_path) as f:
-              lines = f.readlines()
-          print(f"Total lines: {len(lines)}")
-
-          errors = []
-          for i, line in enumerate(lines, 1):
-              stripped = line.rstrip()
-              # Check for unclosed strings (rough check)
-              count = stripped.count('"') - stripped.count('\\"')
-              if count % 2 != 0 and '//' not in stripped and '*' not in stripped:
-                  if not stripped.endswith('" +') and not stripped.endswith('"+'):
-                      errors.append(f"  Line {i}: possible unclosed string: {stripped}")
-
-          if errors:
-              print("WARNINGS:")
-              for e in errors:
-                  print(e)
-          else:
-              print("No string issues detected")
+          print(f"\nAsadMainActivity.java written ({os.path.getsize(activity_path)} bytes, {len(java_code.splitlines())} lines)")
 
           PYEOF
 
           echo ""
-          echo "=== Verify generated Activity ==="
-          head -30 app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
-          echo "..."
-          grep -n "launchVpn\|dataSource\|DataSource\|insertProfile" app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
+          echo "=== Verify generated launchVpn method ==="
+          sed -n '/private void launchVpn/,/^    }/p' app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
 
       - name: Patch AndroidManifest for AsadVPN launcher
         run: |
@@ -1278,13 +1271,11 @@ jobs:
           grep "namespace" app/build.gradle
           echo "--- Launcher ---"
           grep -B1 -A1 "LAUNCHER" app/src/main/AndroidManifest.xml
-          echo "--- Custom files ---"
+          echo "--- Custom files exist ---"
           ls -la app/src/main/java/org/strongswan/android/logic/ProfileCrypto.java
           ls -la app/src/main/java/org/strongswan/android/logic/ProfileManager.java
           ls -la app/src/main/java/org/strongswan/android/logic/FastServerSelector.java
           ls -la app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
-          echo "--- launchVpn method ---"
-          sed -n '/private void launchVpn/,/^    }/p' app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
 
       - name: Test ndk-build (dry run)
         run: |
@@ -1320,7 +1311,7 @@ jobs:
             grep -E "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter\|TaskExecution\|EventFiring\|DefaultBuild" | head -30
             echo ""
             echo "=== Cannot find symbol ==="
-            grep -B2 "cannot find symbol\|is abstract\|unclosed string\|cannot be applied" "${GITHUB_WORKSPACE}/build.log" | head -20
+            grep -B2 "cannot find symbol\|is abstract\|unclosed string\|cannot be applied\|incompatible types" "${GITHUB_WORKSPACE}/build.log" | head -20
             exit 1
           fi
 
