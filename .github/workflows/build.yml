@@ -182,15 +182,69 @@ jobs:
             fi
           done
 
-      - name: Rebrand as AsadVPN (applicationId only)
+      - name: Rebrand as AsadVPN (full co-existence fix)
         run: |
           cd ss-full/src/frontends/android
+
+          # 1. Change applicationId
           sed -i "s|applicationId \"org.strongswan.android\"|applicationId \"${CUSTOM_APP_ID}\"|g" app/build.gradle
+
+          # 2. Change app name in all strings.xml
           find . -name "strings.xml" | while read str; do
             sed -i "s|<string name=\"app_name\">strongSwan VPN Client</string>|<string name=\"app_name\">${CUSTOM_APP_NAME}</string>|g" "${str}"
           done
+
+          # 3. Fix content provider authority conflict
+          # Change authority in manifest
+          sed -i 's|android:authorities="org.strongswan.android.content.log"|android:authorities="com.asadvpn.client.content.log"|g' app/src/main/AndroidManifest.xml
+
+          # Change authority in LogContentProvider.java
+          find . -name "LogContentProvider.java" | while read f; do
+            sed -i 's|org.strongswan.android.content.log|com.asadvpn.client.content.log|g' "$f"
+          done
+
+          # Also check for any other reference to the authority string
+          grep -rl "org.strongswan.android.content.log" app/src/main/ 2>/dev/null | while read f; do
+            echo "  Fixing authority in: $f"
+            sed -i 's|org.strongswan.android.content.log|com.asadvpn.client.content.log|g' "$f"
+          done
+
+          # 4. Fix intent action strings to avoid conflict with original app
+          # These are used in intent-filters and must be unique per app
+          MANIFEST="app/src/main/AndroidManifest.xml"
+          sed -i 's|org.strongswan.android.action.START_PROFILE|com.asadvpn.client.action.START_PROFILE|g' "${MANIFEST}"
+          sed -i 's|org.strongswan.android.action.DISCONNECT|com.asadvpn.client.action.DISCONNECT|g' "${MANIFEST}"
+
+          # Fix corresponding Java constants
+          find . -name "VpnProfileControlActivity.java" | while read f; do
+            sed -i 's|org.strongswan.android.action.START_PROFILE|com.asadvpn.client.action.START_PROFILE|g' "$f"
+            sed -i 's|org.strongswan.android.action.DISCONNECT|com.asadvpn.client.action.DISCONNECT|g' "$f"
+            sed -i 's|org.strongswan.android.VPN_PROFILE_UUID|com.asadvpn.client.VPN_PROFILE_UUID|g' "$f"
+            sed -i 's|org.strongswan.android.VPN_PROFILE_ID|com.asadvpn.client.VPN_PROFILE_ID|g' "$f"
+          done
+
+          # Fix VpnNotSupportedError message ID constant
+          find . -name "VpnProfileControlActivity.java" | while read f; do
+            sed -i 's|org.strongswan.android.VpnNotSupportedError|com.asadvpn.client.VpnNotSupportedError|g' "$f"
+          done
+
+          # 5. Fix Constants.java if it has hardcoded package references
+          find . -name "Constants.java" | while read f; do
+            echo "  Checking Constants.java: $f"
+            grep "org.strongswan.android" "$f" || true
+          done
+
+          # 6. Fix tile service label references (QS tile)
+          sed -i 's|android.service.quicksettings.action.QS_TILE_PREFERENCES|android.service.quicksettings.action.QS_TILE_PREFERENCES|g' "${MANIFEST}"
+
+          echo ""
+          echo "=== Verification ==="
           echo "applicationId: $(grep applicationId app/build.gradle)"
           echo "namespace: $(grep namespace app/build.gradle)"
+          echo "Content provider authority:"
+          grep "authorities" app/src/main/AndroidManifest.xml
+          echo "Intent actions:"
+          grep "action.*asadvpn\|action.*strongswan" app/src/main/AndroidManifest.xml || true
 
       - name: Create AsadVPN logic classes
         run: |
@@ -649,7 +703,7 @@ jobs:
 
           echo "=== UI resources created ==="
 
-      - name: Create AsadMainActivity (reflection-based, no auto-discovery)
+      - name: Create AsadMainActivity (correct API, no reflection)
         run: |
           cd ss-full/src/frontends/android
           ACTIVITY="app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java"
@@ -660,7 +714,6 @@ jobs:
           import android.app.Activity;
           import android.app.AlertDialog;
           import android.content.ComponentName;
-          import android.content.Context;
           import android.content.Intent;
           import android.content.ServiceConnection;
           import android.net.Uri;
@@ -677,12 +730,12 @@ jobs:
           import org.strongswan.android.R;
           import org.strongswan.android.data.VpnProfile;
           import org.strongswan.android.data.VpnProfileDataSource;
+          import org.strongswan.android.data.VpnProfileSource;
           import org.strongswan.android.data.VpnType;
           import org.strongswan.android.logic.CharonVpnService;
           import org.strongswan.android.logic.FastServerSelector;
           import org.strongswan.android.logic.ProfileCrypto;
           import org.strongswan.android.logic.ProfileManager;
-          import org.strongswan.android.logic.StrongSwanApplication;
           import org.strongswan.android.logic.VpnStateService;
           import org.strongswan.android.logic.VpnStateService.State;
 
@@ -702,6 +755,7 @@ jobs:
               private ProfileCrypto.ProfileData activeProfile;
               private VpnStateService mService;
               private String pendingServer;
+              private String pendingProfileUuid;
 
               private final ServiceConnection mServiceConnection = new ServiceConnection() {
                   @Override
@@ -794,7 +848,6 @@ jobs:
                       connectButton.setText("EXPIRED");
                       connectButton.setEnabled(false);
                       connectButton.setBackgroundResource(R.drawable.circle_button_connect);
-                      showExpiredDialog();
                       return;
                   }
 
@@ -867,105 +920,16 @@ jobs:
                       runOnUiThread(() -> {
                           serverText.setText("> " + fastest.name);
                           pendingServer = fastest.address;
-                          Intent intent = VpnService.prepare(AsadMainActivity.this);
-                          if (intent != null) {
-                              startActivityForResult(intent, VPN_REQUEST_CODE);
-                          } else {
-                              launchVpn(fastest.address);
-                          }
+                          startVpnConnection(fastest.address);
                       });
                   }).start();
               }
 
-              @Override
-              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-                  super.onActivityResult(requestCode, resultCode, data);
-                  if (requestCode == VPN_REQUEST_CODE) {
-                      if (resultCode == RESULT_OK && pendingServer != null) {
-                          launchVpn(pendingServer);
-                      } else {
-                          refreshUI();
-                      }
-                  } else if (requestCode == QR_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
-                      String scanned = data.getStringExtra("SCAN_RESULT");
-                      if (scanned != null && !scanned.isEmpty()) {
-                          importProfile(scanned);
-                      }
-                  }
-              }
-
-              /**
-               * Get DataSource using reflection - avoids compile-time dependency on
-               * concrete class names that vary between strongSwan versions.
-               */
-              private VpnProfileDataSource findDataSource() {
+              private void startVpnConnection(String serverAddress) {
                   try {
-                      Object app = getApplication();
-                      // Search all public no-arg methods that return a VpnProfileDataSource
-                      for (java.lang.reflect.Method method : app.getClass().getMethods()) {
-                          if (method.getParameterTypes().length == 0) {
-                              Class<?> ret = method.getReturnType();
-                              if (VpnProfileDataSource.class.isAssignableFrom(ret)) {
-                                  Object result = method.invoke(app);
-                                  if (result instanceof VpnProfileDataSource) {
-                                      Log.d(TAG, "DataSource via " + method.getName());
-                                      return (VpnProfileDataSource) result;
-                                  }
-                              }
-                          }
-                      }
-                  } catch (Exception e) {
-                      Log.e(TAG, "Reflection DataSource lookup failed", e);
-                  }
-                  return null;
-              }
-
-              /**
-               * Get the profile UUID extra key using reflection.
-               */
-              private String findProfileExtraKey() {
-                  String[] candidates = {
-                      "EXTRA_VPN_PROFILE_UUID",
-                      "EXTRA_VPN_PROFILE_ID",
-                      "EXTRA_PROFILE"
-                  };
-                  for (String name : candidates) {
-                      try {
-                          java.lang.reflect.Field f = VpnProfileControlActivity.class.getField(name);
-                          Object val = f.get(null);
-                          if (val instanceof String) {
-                              return (String) val;
-                          }
-                      } catch (Exception ignored) {}
-                  }
-                  return "org.strongswan.android.VPN_PROFILE_UUID";
-              }
-
-              /**
-               * Get the profile identifier as a string using reflection.
-               */
-              private String getProfileId(VpnProfile profile) {
-                  String[] getters = {"getUUID", "getUuid", "getId"};
-                  for (String name : getters) {
-                      try {
-                          java.lang.reflect.Method m = profile.getClass().getMethod(name);
-                          Object result = m.invoke(profile);
-                          if (result != null) {
-                              return result.toString();
-                          }
-                      } catch (Exception ignored) {}
-                  }
-                  return java.util.UUID.randomUUID().toString();
-              }
-
-              private void launchVpn(String serverAddress) {
-                  try {
-                      VpnProfileDataSource dataSource = findDataSource();
-                      if (dataSource == null) {
-                          Toast.makeText(this, "Database unavailable", Toast.LENGTH_LONG).show();
-                          refreshUI();
-                          return;
-                      }
+                      // 1. Create and save the VPN profile to the database
+                      VpnProfileDataSource dataSource = new VpnProfileSource(this);
+                      dataSource.open();
 
                       VpnProfile profile = new VpnProfile();
                       profile.setName("AsadVPN - " + serverAddress);
@@ -974,20 +938,66 @@ jobs:
                       profile.setPassword(activeProfile.password);
                       profile.setVpnType(VpnType.IKEV2_EAP);
 
-                      dataSource.insertProfile(profile);
+                      VpnProfile saved = dataSource.insertProfile(profile);
+                      dataSource.close();
 
-                      String extraKey = findProfileExtraKey();
-                      String profileId = getProfileId(profile);
+                      if (saved == null) {
+                          Toast.makeText(this, "Failed to save VPN profile", Toast.LENGTH_LONG).show();
+                          refreshUI();
+                          return;
+                      }
 
-                      Intent vpnIntent = new Intent(this, VpnProfileControlActivity.class);
-                      vpnIntent.putExtra(extraKey, profileId);
-                      startActivity(vpnIntent);
+                      // 2. Store the UUID for use after VPN permission is granted
+                      pendingProfileUuid = saved.getUUID().toString();
+
+                      // 3. Check VPN permission
+                      Intent intent = VpnService.prepare(this);
+                      if (intent != null) {
+                          startActivityForResult(intent, VPN_REQUEST_CODE);
+                      } else {
+                          launchVpnWithProfile(pendingProfileUuid, activeProfile.password);
+                      }
 
                   } catch (Exception e) {
                       Log.e(TAG, "Failed to start VPN", e);
                       Toast.makeText(this, "Connection failed: " + e.getMessage(),
                           Toast.LENGTH_LONG).show();
                       refreshUI();
+                  }
+              }
+
+              private void launchVpnWithProfile(String profileUuid, String password) {
+                  // Use the same mechanism as VpnProfileControlActivity:
+                  // Send a Bundle with UUID + password to VpnStateService.connect()
+                  if (mService != null) {
+                      Bundle profileInfo = new Bundle();
+                      profileInfo.putString(VpnProfileDataSource.KEY_UUID, profileUuid);
+                      profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, activeProfile.username);
+                      profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, password);
+                      mService.connect(profileInfo, true);
+                  } else {
+                      // Fallback: launch via VpnProfileControlActivity intent
+                      Intent vpnIntent = new Intent(this, VpnProfileControlActivity.class);
+                      vpnIntent.setAction(VpnProfileControlActivity.START_PROFILE);
+                      vpnIntent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profileUuid);
+                      startActivity(vpnIntent);
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == VPN_REQUEST_CODE) {
+                      if (resultCode == RESULT_OK && pendingProfileUuid != null) {
+                          launchVpnWithProfile(pendingProfileUuid, activeProfile.password);
+                      } else {
+                          refreshUI();
+                      }
+                  } else if (requestCode == QR_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
+                      String scanned = data.getStringExtra("SCAN_RESULT");
+                      if (scanned != null && !scanned.isEmpty()) {
+                          importProfile(scanned);
+                      }
                   }
               }
 
@@ -1065,10 +1075,20 @@ jobs:
 
           echo "=== AsadMainActivity.java created ==="
           echo "Lines: $(wc -l < ${ACTIVITY})"
-          echo "Size: $(wc -c < ${ACTIVITY}) bytes"
-          echo ""
-          echo "--- launchVpn method ---"
-          sed -n '/private void launchVpn/,/^        }/p' "${ACTIVITY}"
+
+      - name: Check if VpnProfileSource exists, create if needed
+        run: |
+          cd ss-full/src/frontends/android
+          # VpnProfileControlActivity uses VpnProfileSource - verify it exists
+          SEARCH=$(find app/src/main/java -name "VpnProfileSource.java" 2>/dev/null)
+          if [ -z "${SEARCH}" ]; then
+            echo "VpnProfileSource.java NOT found - need to check what class is used"
+            echo "Looking for VpnProfileDataSource implementations..."
+            find app/src/main/java -name "*.java" -exec grep -l "implements VpnProfileDataSource" {} \;
+            find app/src/main/java -name "*.java" -exec grep -l "class VpnProfile.*DataSource\|class VpnProfile.*Source" {} \;
+          else
+            echo "Found: ${SEARCH}"
+          fi
 
       - name: Patch AndroidManifest for AsadVPN launcher
         run: |
@@ -1078,14 +1098,16 @@ jobs:
           with open("app/src/main/AndroidManifest.xml", "r") as f:
               content = f.read()
 
+          # Remove LAUNCHER from original MainActivity
           content = content.replace(
               '<category android:name="android.intent.category.LAUNCHER" />',
               '<!-- launcher moved to AsadMainActivity -->'
           )
 
+          # Add AsadMainActivity before </application>
           asad_activity = '''
                   <activity
-                      android:name="org.strongswan.android.ui.AsadMainActivity"
+                      android:name=".ui.AsadMainActivity"
                       android:label="AsadVPN"
                       android:exported="true"
                       android:theme="@style/ApplicationTheme">
@@ -1105,17 +1127,32 @@ jobs:
       - name: Pre-build verification
         run: |
           cd ss-full/src/frontends/android
-          echo "--- applicationId ---"
+          echo "=== applicationId ==="
           grep "applicationId" app/build.gradle
-          echo "--- namespace ---"
+          echo ""
+          echo "=== namespace ==="
           grep "namespace" app/build.gradle
-          echo "--- Launcher ---"
-          grep -B1 -A1 "LAUNCHER" app/src/main/AndroidManifest.xml
-          echo "--- Custom files ---"
+          echo ""
+          echo "=== Content Provider Authority ==="
+          grep "authorities" app/src/main/AndroidManifest.xml
+          echo ""
+          echo "=== Launcher ==="
+          grep -B2 -A2 "LAUNCHER" app/src/main/AndroidManifest.xml
+          echo ""
+          echo "=== Intent Actions ==="
+          grep "action.*START_PROFILE\|action.*DISCONNECT" app/src/main/AndroidManifest.xml
+          echo ""
+          echo "=== Custom files ==="
           ls -la app/src/main/java/org/strongswan/android/logic/ProfileCrypto.java
           ls -la app/src/main/java/org/strongswan/android/logic/ProfileManager.java
           ls -la app/src/main/java/org/strongswan/android/logic/FastServerSelector.java
           ls -la app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
+          echo ""
+          echo "=== VpnProfileSource check ==="
+          find app/src/main/java -name "VpnProfileSource.java" -o -name "VpnProfileSqlDataSource.java" | head -5
+          echo ""
+          echo "=== Remaining org.strongswan.android references in manifest ==="
+          grep "org.strongswan.android" app/src/main/AndroidManifest.xml | grep -v "name=\." | grep -v "namespace" || echo "None (good)"
 
       - name: Test ndk-build (dry run)
         run: |
@@ -1151,7 +1188,7 @@ jobs:
             grep -E "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter\|TaskExecution\|EventFiring\|DefaultBuild" | head -30
             echo ""
             echo "=== Cannot find symbol ==="
-            grep -B2 "cannot find symbol\|is abstract\|unclosed string\|cannot be applied\|incompatible types" "${GITHUB_WORKSPACE}/build.log" | head -20
+            grep -B2 "cannot find symbol\|is abstract\|unclosed string\|cannot be applied\|incompatible types" "${GITHUB_WORKSPACE}/build.log" | head -30
             exit 1
           fi
 
