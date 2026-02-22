@@ -185,7 +185,7 @@ jobs:
             sed -i 's|org.strongswan.android.VpnNotSupportedError|com.asadvpn.client.VpnNotSupportedError|g' "$f"
           done
 
-      - name: Generate lioness app icon
+      - name: Generate lion app icon
         run: |
           cd ss-full/src/frontends/android
           RES_DIR="app/src/main/res"
@@ -195,33 +195,102 @@ jobs:
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp" android:height="108dp"
               android:viewportWidth="108" android:viewportHeight="108">
-              <path android:fillColor="#1a1a2e" android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0"/>
-              <path android:fillColor="#C4954A" android:pathData="M54,22 C38,22 28,30 26,38 C24,44 24,50 26,54 C24,58 23,62 25,68 C27,74 32,80 38,83 C42,85 48,86 54,86 C60,86 66,85 70,83 C76,80 81,74 83,68 C85,62 84,58 82,54 C84,50 84,44 82,38 C80,30 70,22 54,22Z"/>
-              <path android:fillColor="#E8C07A" android:pathData="M54,30 C42,30 34,36 32,42 C30,48 32,54 34,58 C36,64 42,72 48,76 C50,77 52,78 54,78 C56,78 58,77 60,76 C66,72 72,64 74,58 C76,54 78,48 76,42 C74,36 66,30 54,30Z"/>
-              <path android:fillColor="#C4954A" android:pathData="M32,36 L26,24 L36,30Z"/>
-              <path android:fillColor="#C4954A" android:pathData="M76,36 L82,24 L72,30Z"/>
-              <path android:fillColor="#D4A574" android:pathData="M33,35 L29,27 L36,32Z"/>
-              <path android:fillColor="#D4A574" android:pathData="M75,35 L79,27 L72,32Z"/>
-              <path android:fillColor="#2D5A27" android:pathData="M42,48 C42,45 44,43 47,43 C50,43 52,45 52,48 C52,51 50,53 47,53 C44,53 42,51 42,48Z"/>
-              <path android:fillColor="#2D5A27" android:pathData="M56,48 C56,45 58,43 61,43 C64,43 66,45 66,48 C66,51 64,53 61,53 C58,53 56,51 56,48Z"/>
-              <path android:fillColor="#111111" android:pathData="M45,47 C45,46 46,45 47,45 C48,45 49,46 49,47 C49,48 48,49 47,49 C46,49 45,48 45,47Z"/>
-              <path android:fillColor="#111111" android:pathData="M59,47 C59,46 60,45 61,45 C62,45 63,46 63,47 C63,48 62,49 61,49 C60,49 59,48 59,47Z"/>
-              <path android:fillColor="#FFFFFF" android:pathData="M46,46 C46,45.5 46.5,45 47,45 C47.5,45 47.5,45.5 47,46Z"/>
-              <path android:fillColor="#FFFFFF" android:pathData="M60,46 C60,45.5 60.5,45 61,45 C61.5,45 61.5,45.5 61,46Z"/>
-              <path android:fillColor="#8B5E3C" android:pathData="M50,57 L54,54 L58,57 L56,60 L52,60Z"/>
-              <path android:fillColor="#A0704D" android:pathData="M52,56 L54,54 L56,56 L54,58Z"/>
-              <path android:strokeColor="#8B5E3C" android:strokeWidth="1" android:fillColor="#00000000" android:pathData="M54,60 L54,64"/>
-              <path android:strokeColor="#8B5E3C" android:strokeWidth="1" android:fillColor="#00000000" android:pathData="M54,64 Q48,68 44,66"/>
-              <path android:strokeColor="#8B5E3C" android:strokeWidth="1" android:fillColor="#00000000" android:pathData="M54,64 Q60,68 64,66"/>
-              <path android:fillColor="#C4954A" android:pathData="M38,58 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0"/>
-              <path android:fillColor="#C4954A" android:pathData="M36,62 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0"/>
-              <path android:fillColor="#C4954A" android:pathData="M38,66 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0"/>
-              <path android:fillColor="#C4954A" android:pathData="M70,58 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0"/>
-              <path android:fillColor="#C4954A" android:pathData="M72,62 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0"/>
-              <path android:fillColor="#C4954A" android:pathData="M70,66 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0"/>
-              <path android:fillColor="#00d4aa" android:pathData="M78,70 L86,66 L86,76 C86,80 82,84 78,86 C74,84 70,80 70,76 L70,66Z"/>
-              <path android:fillColor="#1a1a2e" android:pathData="M75,74 L81,74 L81,80 L75,80Z"/>
-              <path android:fillColor="#00000000" android:strokeColor="#1a1a2e" android:strokeWidth="1.5" android:pathData="M76,74 L76,72 C76,70 77,69 78,69 C79,69 80,70 80,72 L80,74"/>
+              <!-- Background circle -->
+              <path android:fillColor="#1a1a2e"
+                  android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0"/>
+              <!-- Mane outer -->
+              <path android:fillColor="#C4954A"
+                  android:pathData="M54,18 C36,18 24,28 22,38 C20,46 22,52 24,56 C22,60 20,66 22,72 C24,78 30,84 38,88 C44,90 49,91 54,91 C59,91 64,90 70,88 C78,84 84,78 86,72 C88,66 86,60 84,56 C86,52 88,46 86,38 C84,28 72,18 54,18Z"/>
+              <!-- Mane spikes top -->
+              <path android:fillColor="#B8862D"
+                  android:pathData="M54,16 L58,24 L50,24Z"/>
+              <path android:fillColor="#B8862D"
+                  android:pathData="M40,20 L46,28 L38,26Z"/>
+              <path android:fillColor="#B8862D"
+                  android:pathData="M68,20 L70,26 L62,28Z"/>
+              <!-- Mane spikes sides -->
+              <path android:fillColor="#B8862D"
+                  android:pathData="M28,30 L34,34 L28,38Z"/>
+              <path android:fillColor="#B8862D"
+                  android:pathData="M80,30 L80,38 L74,34Z"/>
+              <path android:fillColor="#B8862D"
+                  android:pathData="M22,44 L28,46 L24,52Z"/>
+              <path android:fillColor="#B8862D"
+                  android:pathData="M86,44 L84,52 L80,46Z"/>
+              <!-- Face -->
+              <path android:fillColor="#E8C07A"
+                  android:pathData="M54,28 C40,28 32,36 30,44 C28,50 30,56 34,62 C38,68 44,76 50,80 C52,81 53,81 54,81 C55,81 56,81 58,80 C64,76 70,68 74,62 C78,56 80,50 78,44 C76,36 68,28 54,28Z"/>
+              <!-- Inner face lighter area -->
+              <path android:fillColor="#F0D090"
+                  android:pathData="M54,34 C44,34 38,40 36,46 C34,52 36,58 40,64 C44,68 48,72 54,74 C60,72 64,68 68,64 C72,58 74,52 72,46 C70,40 64,34 54,34Z"/>
+              <!-- Left ear -->
+              <path android:fillColor="#C4954A"
+                  android:pathData="M30,32 L24,20 L38,28Z"/>
+              <path android:fillColor="#E8A0A0"
+                  android:pathData="M31,31 L27,24 L36,29Z"/>
+              <!-- Right ear -->
+              <path android:fillColor="#C4954A"
+                  android:pathData="M78,32 L84,20 L70,28Z"/>
+              <path android:fillColor="#E8A0A0"
+                  android:pathData="M77,31 L81,24 L72,29Z"/>
+              <!-- Left eye -->
+              <path android:fillColor="#D4954A"
+                  android:pathData="M40,48 C40,44 43,41 47,41 C51,41 54,44 54,48 C54,52 51,55 47,55 C43,55 40,52 40,48Z"/>
+              <path android:fillColor="#FFFFFF"
+                  android:pathData="M42,48 C42,45 44,43 47,43 C50,43 52,45 52,48 C52,51 50,53 47,53 C44,53 42,51 42,48Z"/>
+              <path android:fillColor="#2D5A27"
+                  android:pathData="M44,47 C44,45.5 45.3,44.5 47,44.5 C48.7,44.5 50,45.5 50,47 C50,48.5 48.7,49.5 47,49.5 C45.3,49.5 44,48.5 44,47Z"/>
+              <path android:fillColor="#111111"
+                  android:pathData="M45.5,46.5 C45.5,45.8 46.2,45.2 47,45.2 C47.8,45.2 48.5,45.8 48.5,46.5 C48.5,47.2 47.8,47.8 47,47.8 C46.2,47.8 45.5,47.2 45.5,46.5Z"/>
+              <path android:fillColor="#FFFFFF"
+                  android:pathData="M46,45.5 a0.6,0.6 0 1,1 1.2,0 a0.6,0.6 0 1,1 -1.2,0"/>
+              <!-- Right eye -->
+              <path android:fillColor="#D4954A"
+                  android:pathData="M54,48 C54,44 57,41 61,41 C65,41 68,44 68,48 C68,52 65,55 61,55 C57,55 54,52 54,48Z"/>
+              <path android:fillColor="#FFFFFF"
+                  android:pathData="M56,48 C56,45 58,43 61,43 C64,43 66,45 66,48 C66,51 64,53 61,53 C58,53 56,51 56,48Z"/>
+              <path android:fillColor="#2D5A27"
+                  android:pathData="M58,47 C58,45.5 59.3,44.5 61,44.5 C62.7,44.5 64,45.5 64,47 C64,48.5 62.7,49.5 61,49.5 C59.3,49.5 58,48.5 58,47Z"/>
+              <path android:fillColor="#111111"
+                  android:pathData="M59.5,46.5 C59.5,45.8 60.2,45.2 61,45.2 C61.8,45.2 62.5,45.8 62.5,46.5 C62.5,47.2 61.8,47.8 61,47.8 C60.2,47.8 59.5,47.2 59.5,46.5Z"/>
+              <path android:fillColor="#FFFFFF"
+                  android:pathData="M60,45.5 a0.6,0.6 0 1,1 1.2,0 a0.6,0.6 0 1,1 -1.2,0"/>
+              <!-- Nose -->
+              <path android:fillColor="#8B5E3C"
+                  android:pathData="M50,58 L54,55 L58,58 L56,61 L52,61Z"/>
+              <path android:fillColor="#6B4226"
+                  android:pathData="M52,57 L54,55 L56,57 L54,59Z"/>
+              <!-- Mouth -->
+              <path android:strokeColor="#8B5E3C" android:strokeWidth="1.2"
+                  android:fillColor="#00000000"
+                  android:pathData="M54,61 L54,65"/>
+              <path android:strokeColor="#8B5E3C" android:strokeWidth="1.2"
+                  android:fillColor="#00000000"
+                  android:pathData="M54,65 Q48,69 44,67"/>
+              <path android:strokeColor="#8B5E3C" android:strokeWidth="1.2"
+                  android:fillColor="#00000000"
+                  android:pathData="M54,65 Q60,69 64,67"/>
+              <!-- Whisker dots left -->
+              <path android:fillColor="#C4954A"
+                  android:pathData="M36,58 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0"/>
+              <path android:fillColor="#C4954A"
+                  android:pathData="M34,62 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0"/>
+              <path android:fillColor="#C4954A"
+                  android:pathData="M36,66 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0"/>
+              <!-- Whisker dots right -->
+              <path android:fillColor="#C4954A"
+                  android:pathData="M72,58 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0"/>
+              <path android:fillColor="#C4954A"
+                  android:pathData="M74,62 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0"/>
+              <path android:fillColor="#C4954A"
+                  android:pathData="M72,66 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0"/>
+              <!-- Shield badge bottom-right -->
+              <path android:fillColor="#00d4aa"
+                  android:pathData="M80,72 L88,68 L88,78 C88,82 84,86 80,88 C76,86 72,82 72,78 L72,68Z"/>
+              <path android:fillColor="#1a1a2e"
+                  android:pathData="M77,76 L83,76 L83,82 L77,82Z"/>
+              <path android:fillColor="#00000000" android:strokeColor="#1a1a2e" android:strokeWidth="1.5"
+                  android:pathData="M78,76 L78,74 C78,72 79,71 80,71 C81,71 82,72 82,74 L82,76"/>
           </vector>
           ICON_EOF
           cat > "${RES_DIR}/drawable/ic_launcher_background.xml" << 'BG_EOF'
@@ -241,22 +310,47 @@ jobs:
           cp "${RES_DIR}/mipmap-anydpi-v26/ic_launcher.xml" "${RES_DIR}/mipmap-anydpi-v26/ic_launcher_round.xml"
           python3 << 'PYEOF'
           import struct, zlib, os
-          def create_png(w,h,bg,fg):
-              raw=[]
-              cx,cy=w//2,h//2;r=min(w,h)//2-2
+          def create_png(w, h, bg_color, mane_color, face_color, accent_color):
+              raw = []
+              cx, cy = w // 2, h // 2
+              r_outer = min(w, h) // 2 - 2
+              r_mane = int(r_outer * 0.85)
+              r_face = int(r_outer * 0.6)
               for y in range(h):
-                  row=[0]
+                  row = [0]
                   for x in range(w):
-                      dx,dy=x-cx,y-cy;row.extend(fg if dx*dx+dy*dy<=r*r else bg)
+                      dx, dy = x - cx, y - cy
+                      dist_sq = dx * dx + dy * dy
+                      if dist_sq <= r_face * r_face:
+                          row.extend(face_color)
+                      elif dist_sq <= r_mane * r_mane:
+                          row.extend(mane_color)
+                      elif dist_sq <= r_outer * r_outer:
+                          row.extend(accent_color)
+                      else:
+                          row.extend(bg_color)
                   raw.append(bytes(row))
-              raw_data=b''.join(raw)
-              def chunk(ct,d):c=ct+d;return struct.pack('>I',len(d))+c+struct.pack('>I',zlib.crc32(c)&0xffffffff)
-              return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(raw_data))+chunk(b'IEND',b'')
-          base='ss-full/src/frontends/android/app/src/main/res'
-          for f,s in {'mipmap-mdpi':48,'mipmap-hdpi':72,'mipmap-xhdpi':96,'mipmap-xxhdpi':144,'mipmap-xxxhdpi':192}.items():
-              p=os.path.join(base,f);os.makedirs(p,exist_ok=True);png=create_png(s,s,[26,26,46],[0,212,170])
-              for n in['ic_launcher.png','ic_launcher_round.png']:
-                  with open(os.path.join(p,n),'wb')as fh:fh.write(png)
+              raw_data = b''.join(raw)
+              def chunk(ct, d):
+                  c = ct + d
+                  return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+              return (b'\x89PNG\r\n\x1a\n' +
+                      chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)) +
+                      chunk(b'IDAT', zlib.compress(raw_data)) +
+                      chunk(b'IEND', b''))
+          base = 'ss-full/src/frontends/android/app/src/main/res'
+          bg = [26, 26, 46]
+          mane = [196, 149, 74]
+          face = [232, 192, 122]
+          accent = [0, 212, 170]
+          for folder, size in {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96,
+                               'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}.items():
+              p = os.path.join(base, folder)
+              os.makedirs(p, exist_ok=True)
+              png = create_png(size, size, bg, mane, face, accent)
+              for n in ['ic_launcher.png', 'ic_launcher_round.png']:
+                  with open(os.path.join(p, n), 'wb') as fh:
+                      fh.write(png)
           PYEOF
 
       - name: Create UI resources
@@ -311,6 +405,33 @@ jobs:
                   android:background="#f0f0f0" android:padding="8dp"/>
           </LinearLayout>
           XML_EOF
+          cat > "${RES_DIR}/layout/activity_qr_scanner.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent" android:layout_height="match_parent"
+              android:background="#000000">
+              <SurfaceView android:id="@+id/camera_preview"
+                  android:layout_width="match_parent" android:layout_height="match_parent"/>
+              <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                  android:layout_gravity="top" android:orientation="vertical"
+                  android:background="#88000000" android:padding="16dp">
+                  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                      android:text="Scan QR Code" android:textColor="#00d4aa"
+                      android:textSize="20sp" android:textStyle="bold"/>
+                  <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                      android:text="Point camera at your AsadVPN QR code" android:textColor="#aaaaaa"
+                      android:textSize="13sp" android:layout_marginTop="4dp"/>
+              </LinearLayout>
+              <View android:layout_width="220dp" android:layout_height="220dp"
+                  android:layout_gravity="center"
+                  android:background="@drawable/qr_frame"/>
+              <Button android:id="@+id/cancel_scan" android:layout_width="wrap_content"
+                  android:layout_height="wrap_content" android:layout_gravity="bottom|center_horizontal"
+                  android:layout_marginBottom="40dp" android:text="Cancel"
+                  android:textColor="#ffffff" android:backgroundTint="#ff4444"
+                  android:paddingLeft="32dp" android:paddingRight="32dp"/>
+          </FrameLayout>
+          XML_EOF
           mkdir -p "${RES_DIR}/drawable"
           cat > "${RES_DIR}/drawable/circle_button_connect.xml" << 'XML_EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -325,6 +446,13 @@ jobs:
               <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="#cc3333"/><stroke android:width="3dp" android:color="#ff4444"/></shape></item>
               <item><shape android:shape="oval"><solid android:color="#dd4444"/><stroke android:width="3dp" android:color="#ff4444"/></shape></item>
           </selector>
+          XML_EOF
+          cat > "${RES_DIR}/drawable/qr_frame.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <stroke android:width="2dp" android:color="#00d4aa" android:dashWidth="8dp" android:dashGap="4dp"/>
+              <corners android:radius="12dp"/>
+          </shape>
           XML_EOF
 
       - name: Create logic classes
@@ -383,7 +511,8 @@ jobs:
               }
 
               public static ProfileData decryptProfile(String encryptedBase64) throws Exception {
-                  byte[] encrypted = Base64.decode(encryptedBase64, Base64.DEFAULT | Base64.NO_WRAP);
+                  byte[] encrypted = Base64.decode(encryptedBase64.trim(), Base64.DEFAULT | Base64.NO_WRAP);
+                  if (encrypted.length < 13) throw new Exception("Data too short");
                   byte[] iv = new byte[12];
                   byte[] ciphertext = new byte[encrypted.length - 12];
                   System.arraycopy(encrypted, 0, iv, 0, 12);
@@ -407,11 +536,8 @@ jobs:
                   data.espProposal = obj.optString("espProposal", null);
                   if (obj.has("mtu")) data.mtu = obj.getInt("mtu");
                   if (obj.has("splitTunneling")) data.splitTunneling = obj.getInt("splitTunneling");
-
-                  // Top-level fallback credentials (for backward compatibility)
                   String topUser = obj.optString("username", null);
                   String topPass = obj.optString("password", null);
-
                   JSONArray serversArr = obj.getJSONArray("servers");
                   data.servers = new ServerInfo[serversArr.length()];
                   for (int i = 0; i < serversArr.length(); i++) {
@@ -419,7 +545,6 @@ jobs:
                       ServerInfo si = new ServerInfo();
                       si.address = s.getString("addr");
                       si.name = s.optString("name", si.address);
-                      // Per-server credentials, fallback to top-level
                       si.username = s.optString("username", topUser);
                       si.password = s.optString("password", topPass);
                       si.caCertPem = s.optString("caCert", null);
@@ -448,31 +573,50 @@ jobs:
           cat > "${JAVA_DIR}/logic/CertificateImporter.java" << 'JAVA_EOF'
           package org.strongswan.android.logic;
 
+          import android.content.Context;
           import android.util.Log;
-          import org.strongswan.android.security.LocalCertificateStore;
           import java.io.ByteArrayInputStream;
+          import java.io.File;
+          import java.io.FileOutputStream;
           import java.nio.charset.StandardCharsets;
+          import java.security.KeyStore;
+          import java.security.MessageDigest;
           import java.security.cert.CertificateFactory;
           import java.security.cert.X509Certificate;
 
           public class CertificateImporter {
-              private static final String TAG = "AsadVPN";
+              private static final String TAG = "AsadVPN.CertImporter";
 
-              public static String importCaCertificate(String pemData) {
+              public static String importCaCertificate(Context context, String pemData) {
                   try {
                       CertificateFactory cf = CertificateFactory.getInstance("X.509");
-                      ByteArrayInputStream bis = new ByteArrayInputStream(pemData.getBytes(StandardCharsets.UTF_8));
+                      ByteArrayInputStream bis = new ByteArrayInputStream(
+                          pemData.getBytes(StandardCharsets.UTF_8));
                       X509Certificate cert = (X509Certificate) cf.generateCertificate(bis);
                       bis.close();
-                      LocalCertificateStore store = new LocalCertificateStore();
-                      boolean added = store.addCertificate(cert);
-                      if (added) {
-                          String alias = store.getCertificateAlias(cert);
-                          Log.i(TAG, "CA cert imported: " + alias);
-                          TrustedCertificateManager.getInstance().reset();
-                          return alias;
+                      cert.checkValidity();
+                      byte[] encoded = cert.getEncoded();
+                      MessageDigest md = MessageDigest.getInstance("SHA-256");
+                      byte[] digest = md.digest(encoded);
+                      StringBuilder sb = new StringBuilder();
+                      for (int i = 0; i < Math.min(8, digest.length); i++) {
+                          sb.append(String.format("%02x", digest[i]));
                       }
-                      return null;
+                      String alias = sb.toString();
+                      File certDir = new File(context.getFilesDir(), "keychain");
+                      if (!certDir.exists()) certDir.mkdirs();
+                      File certFile = new File(certDir, alias + ".pem");
+                      FileOutputStream fos = new FileOutputStream(certFile);
+                      fos.write(pemData.getBytes(StandardCharsets.UTF_8));
+                      fos.close();
+                      Log.i(TAG, "CA cert saved: " + certFile.getAbsolutePath()
+                          + " subject=" + cert.getSubjectX500Principal().getName());
+                      try {
+                          TrustedCertificateManager.getInstance().reset();
+                      } catch (Exception e) {
+                          Log.w(TAG, "TCM reset: " + e.getMessage());
+                      }
+                      return alias;
                   } catch (Exception e) {
                       Log.e(TAG, "CA cert import failed", e);
                       return null;
@@ -495,7 +639,7 @@ jobs:
           import java.net.URL;
 
           public class ProfileManager {
-              private static final String TAG = "AsadVPN";
+              private static final String TAG = "AsadVPN.ProfileMgr";
               private static final String PREFS = "asadvpn_profiles";
               private static final String KEY_PROFILE = "active_profile";
               private static final String KEY_LAST_UPDATE = "last_update_check";
@@ -558,7 +702,7 @@ jobs:
                           r.close();
                           conn.disconnect();
                           String enc = sb.toString().trim();
-                          if (enc.isEmpty()) throw new Exception("Empty");
+                          if (enc.isEmpty()) throw new Exception("Empty response");
                           ProfileCrypto.ProfileData nd = ProfileCrypto.decryptProfile(enc);
                           nd.expiryTimestamp = data.expiryTimestamp;
                           nd.updateUrl = data.updateUrl;
@@ -590,8 +734,8 @@ jobs:
                           JSONObject s = new JSONObject();
                           s.put("addr", si.address);
                           s.put("name", si.name);
-                          s.put("username", si.username);
-                          s.put("password", si.password);
+                          if (si.username != null) s.put("username", si.username);
+                          if (si.password != null) s.put("password", si.password);
                           if (si.caCertPem != null) s.put("caCert", si.caCertPem);
                           if (si.remoteId != null) s.put("remoteId", si.remoteId);
                           servers.put(s);
@@ -618,7 +762,7 @@ jobs:
           import java.util.concurrent.*;
 
           public class FastServerSelector {
-              private static final String TAG = "AsadVPN";
+              private static final String TAG = "AsadVPN.ServerSelect";
 
               public static ProfileCrypto.ServerInfo findFastest(ProfileCrypto.ServerInfo[] servers) {
                   if (servers == null || servers.length == 0) return null;
@@ -631,19 +775,172 @@ jobs:
                       futures.add(exec.submit(() -> {
                           long start = System.currentTimeMillis();
                           try {
-                              boolean ok = InetAddress.getByName(servers[idx].address).isReachable(2000);
-                              return new long[]{idx, ok ? System.currentTimeMillis() - start : Long.MAX_VALUE};
-                          } catch (Exception e) { return new long[]{idx, Long.MAX_VALUE}; }
+                              InetAddress addr = InetAddress.getByName(servers[idx].address);
+                              boolean ok = addr.isReachable(2000);
+                              long elapsed = System.currentTimeMillis() - start;
+                              Log.d(TAG, "Server " + servers[idx].address + " reachable=" + ok + " ms=" + elapsed);
+                              return new long[]{idx, ok ? elapsed : Long.MAX_VALUE};
+                          } catch (Exception e) {
+                              Log.d(TAG, "Server " + servers[idx].address + " error: " + e.getMessage());
+                              return new long[]{idx, Long.MAX_VALUE};
+                          }
                       }));
                   }
-                  int bestIdx = 0; long bestMs = Long.MAX_VALUE;
+                  int bestIdx = 0;
+                  long bestMs = Long.MAX_VALUE;
                   try {
-                      exec.shutdown(); exec.awaitTermination(3, TimeUnit.SECONDS);
+                      exec.shutdown();
+                      exec.awaitTermination(3, TimeUnit.SECONDS);
                       for (Future<long[]> f : futures) {
-                          if (f.isDone()) { long[] r = f.get(); if (r[1] < bestMs) { bestMs = r[1]; bestIdx = (int) r[0]; } }
+                          if (f.isDone()) {
+                              long[] r = f.get();
+                              if (r[1] < bestMs) { bestMs = r[1]; bestIdx = (int) r[0]; }
+                          }
                       }
                   } catch (Exception e) { Log.w(TAG, "Select error", e); }
+                  if (bestMs == Long.MAX_VALUE) {
+                      Log.w(TAG, "No reachable server, using first");
+                      bestIdx = 0;
+                  }
+                  Log.i(TAG, "Selected: " + servers[bestIdx].address + " (" + bestMs + "ms)");
                   return servers[bestIdx];
+              }
+          }
+          JAVA_EOF
+
+      - name: Create QR Scanner Activity
+        run: |
+          cd ss-full/src/frontends/android
+          JAVA_DIR="app/src/main/java/org/strongswan/android/ui"
+          mkdir -p "${JAVA_DIR}"
+
+          cat > "${JAVA_DIR}/QrScannerActivity.java" << 'JAVA_EOF'
+          package org.strongswan.android.ui;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.util.Log;
+          import android.util.SparseArray;
+          import android.view.SurfaceHolder;
+          import android.view.SurfaceView;
+          import android.widget.Button;
+          import android.widget.Toast;
+
+          import com.google.android.gms.vision.CameraSource;
+          import com.google.android.gms.vision.Detector;
+          import com.google.android.gms.vision.barcode.Barcode;
+          import com.google.android.gms.vision.barcode.BarcodeDetector;
+
+          import org.strongswan.android.R;
+
+          import java.io.IOException;
+
+          public class QrScannerActivity extends Activity {
+              private static final String TAG = "AsadVPN.QRScanner";
+              private static final int CAMERA_PERM = 1001;
+              private CameraSource cameraSource;
+              private SurfaceView surfaceView;
+              private boolean detected = false;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  setContentView(R.layout.activity_qr_scanner);
+                  surfaceView = findViewById(R.id.camera_preview);
+                  Button cancelBtn = findViewById(R.id.cancel_scan);
+                  cancelBtn.setOnClickListener(v -> {
+                      setResult(RESULT_CANCELED);
+                      finish();
+                  });
+                  if (Build.VERSION.SDK_INT >= 23 &&
+                      checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                      requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERM);
+                  } else {
+                      setupScanner();
+                  }
+              }
+
+              @Override
+              public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+                  if (requestCode == CAMERA_PERM) {
+                      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                          setupScanner();
+                      } else {
+                          Toast.makeText(this, "Camera permission required for QR scanning", Toast.LENGTH_LONG).show();
+                          setResult(RESULT_CANCELED);
+                          finish();
+                      }
+                  }
+              }
+
+              private void setupScanner() {
+                  BarcodeDetector detector = new BarcodeDetector.Builder(this)
+                      .setBarcodeFormats(Barcode.QR_CODE)
+                      .build();
+                  if (!detector.isOperational()) {
+                      Toast.makeText(this, "QR detector not available. Check Google Play Services.", Toast.LENGTH_LONG).show();
+                      setResult(RESULT_CANCELED);
+                      finish();
+                      return;
+                  }
+                  cameraSource = new CameraSource.Builder(this, detector)
+                      .setAutoFocusEnabled(true)
+                      .setRequestedPreviewSize(1024, 768)
+                      .build();
+                  surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+                      @Override
+                      public void surfaceCreated(SurfaceHolder holder) {
+                          startCamera();
+                      }
+                      @Override
+                      public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
+                      @Override
+                      public void surfaceDestroyed(SurfaceHolder holder) {
+                          if (cameraSource != null) cameraSource.stop();
+                      }
+                  });
+                  detector.setProcessor(new Detector.Processor<Barcode>() {
+                      @Override
+                      public void release() {}
+                      @Override
+                      public void receiveDetections(Detector.Detections<Barcode> detections) {
+                          SparseArray<Barcode> barcodes = detections.getDetectedItems();
+                          if (barcodes.size() > 0 && !detected) {
+                              detected = true;
+                              String value = barcodes.valueAt(0).rawValue;
+                              Log.i(TAG, "QR detected, length=" + value.length());
+                              Intent result = new Intent();
+                              result.putExtra("SCAN_RESULT", value);
+                              setResult(RESULT_OK, result);
+                              finish();
+                          }
+                      }
+                  });
+              }
+
+              @SuppressWarnings("MissingPermission")
+              private void startCamera() {
+                  try {
+                      if (cameraSource != null) {
+                          cameraSource.start(surfaceView.getHolder());
+                      }
+                  } catch (IOException | SecurityException e) {
+                      Log.e(TAG, "Camera start failed", e);
+                      Toast.makeText(this, "Camera error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                  }
+              }
+
+              @Override
+              protected void onDestroy() {
+                  super.onDestroy();
+                  if (cameraSource != null) {
+                      cameraSource.stop();
+                      cameraSource.release();
+                  }
               }
           }
           JAVA_EOF
@@ -673,7 +970,6 @@ jobs:
           import org.strongswan.android.R;
           import org.strongswan.android.data.VpnProfile;
           import org.strongswan.android.data.VpnProfileDataSource;
-          import org.strongswan.android.data.VpnProfileSource;
           import org.strongswan.android.data.VpnType;
           import org.strongswan.android.logic.CertificateImporter;
           import org.strongswan.android.logic.FastServerSelector;
@@ -688,27 +984,33 @@ jobs:
 
           public class AsadMainActivity extends Activity implements VpnStateService.VpnStateListener {
               private static final String TAG = "AsadVPN";
-              private static final int VPN_REQ = 100, QR_REQ = 200;
+              private static final int VPN_REQ = 100;
+              private static final int QR_REQ = 200;
               private Button connectBtn, importBtn, scanBtn;
               private TextView statusTv, serverTv, daysTv, updateTv;
               private ProfileManager pm;
               private ProfileCrypto.ProfileData profile;
               private ProfileCrypto.ServerInfo pendingServer;
               private VpnStateService svc;
-              private String pendingUuid;
+              private VpnProfile pendingProfile;
               private boolean updatedThisSession = false;
 
               private final ServiceConnection svcConn = new ServiceConnection() {
-                  public void onServiceConnected(ComponentName n, IBinder b) {
-                      svc = ((VpnStateService.LocalBinder) b).getService();
+                  @Override
+                  public void onServiceConnected(ComponentName name, IBinder binder) {
+                      svc = ((VpnStateService.LocalBinder) binder).getService();
                       svc.registerListener(AsadMainActivity.this);
                       refreshUI();
                   }
-                  public void onServiceDisconnected(ComponentName n) { svc = null; }
+                  @Override
+                  public void onServiceDisconnected(ComponentName name) {
+                      svc = null;
+                  }
               };
 
-              @Override protected void onCreate(Bundle si) {
-                  super.onCreate(si);
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_asadvpn_main);
                   connectBtn = findViewById(R.id.connect_button);
                   importBtn = findViewById(R.id.import_button);
@@ -720,20 +1022,27 @@ jobs:
                   pm = new ProfileManager(this);
                   connectBtn.setOnClickListener(v -> onConnect());
                   importBtn.setOnClickListener(v -> showImport());
-                  scanBtn.setOnClickListener(v -> scanQr());
+                  scanBtn.setOnClickListener(v -> launchQrScanner());
                   importBtn.setOnLongClickListener(v -> { forceUpdate(); return true; });
                   bindService(new Intent(this, VpnStateService.class), svcConn, BIND_AUTO_CREATE);
                   doUpdate();
               }
 
-              @Override protected void onDestroy() {
+              @Override
+              protected void onDestroy() {
                   super.onDestroy();
                   if (svc != null) svc.unregisterListener(this);
                   try { unbindService(svcConn); } catch (Exception ignored) {}
               }
-              @Override protected void onResume() { super.onResume(); refreshUI(); }
 
-              @Override public void stateChanged() {
+              @Override
+              protected void onResume() {
+                  super.onResume();
+                  refreshUI();
+              }
+
+              @Override
+              public void stateChanged() {
                   runOnUiThread(() -> {
                       refreshUI();
                       if (svc != null && svc.getState() == State.CONNECTED && !updatedThisSession) {
@@ -745,47 +1054,76 @@ jobs:
 
               private void doUpdate() {
                   pm.checkForUpdates(new ProfileManager.UpdateCallback() {
+                      @Override
                       public void onUpdated(ProfileCrypto.ProfileData d) {
-                          runOnUiThread(() -> { profile = d; refreshUI();
-                              Toast.makeText(AsadMainActivity.this, "Profile updated!", Toast.LENGTH_SHORT).show(); });
+                          runOnUiThread(() -> {
+                              profile = d;
+                              refreshUI();
+                              Toast.makeText(AsadMainActivity.this, "Profile updated!", Toast.LENGTH_SHORT).show();
+                          });
                       }
-                      public void onError(Exception e) { Log.w(TAG, "Update: " + e.getMessage()); }
+                      @Override
+                      public void onError(Exception e) {
+                          Log.w(TAG, "Update: " + e.getMessage());
+                      }
                   });
               }
 
               private void refreshUI() {
                   profile = pm.getActiveProfile();
                   long lu = pm.getLastUpdateTime();
-                  updateTv.setText(lu > 0 ? "Last sync: " + new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(new Date(lu)) : "");
+                  updateTv.setText(lu > 0
+                      ? "Last sync: " + new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(new Date(lu))
+                      : "");
 
                   if (profile == null) {
-                      statusTv.setText("No Profile"); daysTv.setText("Import a profile to get started");
-                      serverTv.setText(""); connectBtn.setText("IMPORT"); connectBtn.setEnabled(true);
-                      connectBtn.setBackgroundResource(R.drawable.circle_button_connect); return;
+                      statusTv.setText("No Profile");
+                      daysTv.setText("Import a profile to get started");
+                      serverTv.setText("");
+                      connectBtn.setText("IMPORT");
+                      connectBtn.setEnabled(true);
+                      connectBtn.setBackgroundResource(R.drawable.circle_button_connect);
+                      return;
                   }
                   if (profile.isExpired()) {
-                      statusTv.setText("Profile Expired"); daysTv.setText("0 days remaining");
-                      serverTv.setText(""); connectBtn.setText("EXPIRED"); connectBtn.setEnabled(false);
-                      connectBtn.setBackgroundResource(R.drawable.circle_button_connect); return;
+                      statusTv.setText("Profile Expired");
+                      daysTv.setText("0 days remaining");
+                      serverTv.setText("");
+                      connectBtn.setText("EXPIRED");
+                      connectBtn.setEnabled(false);
+                      connectBtn.setBackgroundResource(R.drawable.circle_button_connect);
+                      return;
                   }
                   int d = profile.remainingDays();
                   daysTv.setText(d + " day" + (d != 1 ? "s" : "") + " remaining");
                   State st = svc != null ? svc.getState() : State.DISABLED;
                   switch (st) {
                       case CONNECTED:
-                          statusTv.setText("Connected"); serverTv.setText("\uD83D\uDD12 Secure");
-                          connectBtn.setText("DISCONNECT"); connectBtn.setBackgroundResource(R.drawable.circle_button_disconnect);
-                          connectBtn.setEnabled(true); break;
+                          statusTv.setText("Connected");
+                          serverTv.setText("\uD83D\uDD12 Secure");
+                          connectBtn.setText("DISCONNECT");
+                          connectBtn.setBackgroundResource(R.drawable.circle_button_disconnect);
+                          connectBtn.setEnabled(true);
+                          break;
                       case CONNECTING:
-                          statusTv.setText("Connecting..."); serverTv.setText("");
-                          connectBtn.setText("WAIT"); connectBtn.setEnabled(false); break;
+                          statusTv.setText("Connecting...");
+                          serverTv.setText("");
+                          connectBtn.setText("CANCEL");
+                          connectBtn.setEnabled(true);
+                          break;
                       case DISCONNECTING:
-                          statusTv.setText("Disconnecting..."); serverTv.setText("");
-                          connectBtn.setText("WAIT"); connectBtn.setEnabled(false); break;
+                          statusTv.setText("Disconnecting...");
+                          serverTv.setText("");
+                          connectBtn.setText("WAIT");
+                          connectBtn.setEnabled(false);
+                          break;
                       default:
-                          statusTv.setText("Disconnected"); serverTv.setText("Ready");
-                          connectBtn.setText("CONNECT"); connectBtn.setBackgroundResource(R.drawable.circle_button_connect);
-                          connectBtn.setEnabled(true); break;
+                          statusTv.setText("Disconnected");
+                          serverTv.setText("Ready");
+                          connectBtn.setText("CONNECT");
+                          connectBtn.setBackgroundResource(R.drawable.circle_button_connect);
+                          connectBtn.setEnabled(true);
+                          break;
                   }
               }
 
@@ -795,133 +1133,216 @@ jobs:
                   State st = svc != null ? svc.getState() : State.DISABLED;
                   if (st == State.CONNECTED || st == State.CONNECTING) {
                       if (svc != null) svc.disconnect();
-                  } else {
-                      statusTv.setText("Connecting..."); connectBtn.setEnabled(false);
-                      new Thread(() -> {
-                          ProfileCrypto.ServerInfo best = FastServerSelector.findFastest(profile.servers);
-                          if (best == null) {
-                              runOnUiThread(() -> { refreshUI(); Toast.makeText(this, "No servers", Toast.LENGTH_SHORT).show(); });
-                              return;
-                          }
-                          runOnUiThread(() -> startVpn(best));
-                      }).start();
+                      return;
                   }
+                  statusTv.setText("Selecting server...");
+                  connectBtn.setEnabled(false);
+                  new Thread(() -> {
+                      ProfileCrypto.ServerInfo best = FastServerSelector.findFastest(profile.servers);
+                      if (best == null) {
+                          runOnUiThread(() -> {
+                              refreshUI();
+                              Toast.makeText(this, "No servers available", Toast.LENGTH_SHORT).show();
+                          });
+                          return;
+                      }
+                      Log.i(TAG, "Selected server: " + best.address + " user=" + best.username);
+                      runOnUiThread(() -> startVpn(best));
+                  }).start();
               }
 
               private void startVpn(ProfileCrypto.ServerInfo server) {
                   try {
                       String certAlias = null;
                       if (server.hasCaCert()) {
-                          certAlias = CertificateImporter.importCaCertificate(server.caCertPem);
-                          if (certAlias == null) {
-                              Toast.makeText(this, "CA cert import failed", Toast.LENGTH_LONG).show();
-                              refreshUI(); return;
-                          }
+                          certAlias = CertificateImporter.importCaCertificate(this, server.caCertPem);
+                          Log.i(TAG, "Cert import result: " + certAlias);
                       }
-                      VpnProfileDataSource ds = new VpnProfileSource(this);
+                      VpnProfileDataSource ds = new VpnProfileDataSource(this);
                       ds.open();
+                      cleanOldProfiles(ds);
                       VpnProfile vp = new VpnProfile();
-                      vp.setName("AsadVPN");
+                      vp.setName("AsadVPN - " + server.name);
                       vp.setGateway(server.address);
                       vp.setUsername(server.username);
                       vp.setPassword(server.password);
                       vp.setVpnType(VpnType.IKEV2_EAP);
-                      if (certAlias != null) vp.setCertificateAlias(certAlias);
-                      if (server.remoteId != null && !server.remoteId.isEmpty()) vp.setRemoteId(server.remoteId);
-                      if (profile.ikeProposal != null) vp.setIkeProposal(profile.ikeProposal);
-                      if (profile.espProposal != null) vp.setEspProposal(profile.espProposal);
-                      if (profile.mtu != null) vp.setMTU(profile.mtu);
-                      if (profile.splitTunneling != null) vp.setSplitTunneling(profile.splitTunneling);
+                      if (certAlias != null) {
+                          vp.setCertificateAlias(certAlias);
+                      }
+                      if (server.remoteId != null && !server.remoteId.isEmpty()) {
+                          vp.setRemoteId(server.remoteId);
+                      }
+                      if (profile.ikeProposal != null && !profile.ikeProposal.isEmpty()) {
+                          vp.setIkeProposal(profile.ikeProposal);
+                      }
+                      if (profile.espProposal != null && !profile.espProposal.isEmpty()) {
+                          vp.setEspProposal(profile.espProposal);
+                      }
+                      if (profile.mtu != null && profile.mtu > 0) {
+                          vp.setMTU(profile.mtu);
+                      }
+                      if (profile.splitTunneling != null) {
+                          vp.setSplitTunneling(profile.splitTunneling);
+                      }
                       VpnProfile saved = ds.insertProfile(vp);
                       ds.close();
-                      if (saved == null) { Toast.makeText(this, "Save failed", Toast.LENGTH_LONG).show(); refreshUI(); return; }
-                      pendingUuid = saved.getUUID().toString();
+                      if (saved == null) {
+                          Toast.makeText(this, "Failed to save VPN profile", Toast.LENGTH_LONG).show();
+                          refreshUI();
+                          return;
+                      }
+                      Log.i(TAG, "Profile saved: uuid=" + saved.getUUID()
+                          + " gw=" + saved.getGateway()
+                          + " user=" + saved.getUsername()
+                          + " type=" + saved.getVpnType());
+                      pendingProfile = saved;
                       pendingServer = server;
                       Intent intent = VpnService.prepare(this);
-                      if (intent != null) startActivityForResult(intent, VPN_REQ);
-                      else launchVpn();
+                      if (intent != null) {
+                          startActivityForResult(intent, VPN_REQ);
+                      } else {
+                          launchVpn();
+                      }
                   } catch (Exception e) {
-                      Log.e(TAG, "VPN error", e);
+                      Log.e(TAG, "VPN setup error", e);
                       Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                       refreshUI();
                   }
               }
 
-              private void launchVpn() {
-                  if (svc != null && pendingServer != null) {
-                      Bundle b = new Bundle();
-                      b.putString(VpnProfileDataSource.KEY_UUID, pendingUuid);
-                      b.putString(VpnProfileDataSource.KEY_USERNAME, pendingServer.username);
-                      b.putString(VpnProfileDataSource.KEY_PASSWORD, pendingServer.password);
-                      svc.connect(b, true);
-                  } else {
-                      Intent i = new Intent(this, VpnProfileControlActivity.class);
-                      i.setAction(VpnProfileControlActivity.START_PROFILE);
-                      i.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, pendingUuid);
-                      startActivity(i);
+              private void cleanOldProfiles(VpnProfileDataSource ds) {
+                  try {
+                      java.util.List<VpnProfile> profiles = ds.getAllVpnProfiles();
+                      for (VpnProfile p : profiles) {
+                          if (p.getName() != null && p.getName().startsWith("AsadVPN")) {
+                              ds.deleteVpnProfile(p);
+                              Log.d(TAG, "Cleaned old profile: " + p.getName());
+                          }
+                      }
+                  } catch (Exception e) {
+                      Log.w(TAG, "Clean profiles: " + e.getMessage());
                   }
               }
 
-              @Override protected void onActivityResult(int req, int res, Intent data) {
-                  super.onActivityResult(req, res, data);
-                  if (req == VPN_REQ) {
-                      if (res == RESULT_OK && pendingUuid != null) launchVpn();
-                      else refreshUI();
-                  } else if (req == QR_REQ && res == RESULT_OK && data != null) {
-                      String s = data.getStringExtra("SCAN_RESULT");
-                      if (s != null && !s.isEmpty()) doImport(s);
+              private void launchVpn() {
+                  if (pendingProfile == null) {
+                      refreshUI();
+                      return;
+                  }
+                  Log.i(TAG, "Launching VPN connection to " + pendingProfile.getGateway());
+                  if (svc != null) {
+                      Bundle profileInfo = new Bundle();
+                      profileInfo.putString(VpnProfileDataSource.KEY_UUID, pendingProfile.getUUID().toString());
+                      profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, pendingServer.username);
+                      profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, pendingServer.password);
+                      svc.connect(profileInfo, true);
+                  } else {
+                      Log.e(TAG, "VpnStateService not bound!");
+                      Toast.makeText(this, "Service not ready, try again", Toast.LENGTH_SHORT).show();
+                      refreshUI();
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == VPN_REQ) {
+                      if (resultCode == RESULT_OK) {
+                          launchVpn();
+                      } else {
+                          Log.w(TAG, "VPN permission denied");
+                          Toast.makeText(this, "VPN permission required", Toast.LENGTH_SHORT).show();
+                          refreshUI();
+                      }
+                  } else if (requestCode == QR_REQ) {
+                      if (resultCode == RESULT_OK && data != null) {
+                          String scanned = data.getStringExtra("SCAN_RESULT");
+                          if (scanned != null && !scanned.isEmpty()) {
+                              doImport(scanned);
+                          }
+                      }
                   }
               }
 
               private void forceUpdate() {
-                  if (profile == null) { Toast.makeText(this, "Import first", Toast.LENGTH_SHORT).show(); return; }
+                  if (profile == null) {
+                      Toast.makeText(this, "Import a profile first", Toast.LENGTH_SHORT).show();
+                      return;
+                  }
                   if (profile.updateUrl == null || profile.updateUrl.isEmpty()) {
-                      Toast.makeText(this, "No update URL", Toast.LENGTH_SHORT).show(); return; }
-                  Toast.makeText(this, "Checking...", Toast.LENGTH_SHORT).show();
+                      Toast.makeText(this, "No update URL configured", Toast.LENGTH_SHORT).show();
+                      return;
+                  }
+                  Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show();
                   pm.forceUpdate(new ProfileManager.UpdateCallback() {
+                      @Override
                       public void onUpdated(ProfileCrypto.ProfileData d) {
-                          runOnUiThread(() -> { profile = d; refreshUI();
-                              Toast.makeText(AsadMainActivity.this, "Updated!", Toast.LENGTH_SHORT).show(); }); }
+                          runOnUiThread(() -> {
+                              profile = d;
+                              refreshUI();
+                              Toast.makeText(AsadMainActivity.this, "Profile updated!", Toast.LENGTH_SHORT).show();
+                          });
+                      }
+                      @Override
                       public void onError(Exception e) {
-                          runOnUiThread(() -> Toast.makeText(AsadMainActivity.this, "Failed: " + e.getMessage(), Toast.LENGTH_LONG).show()); }
+                          runOnUiThread(() ->
+                              Toast.makeText(AsadMainActivity.this, "Update failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                          );
+                      }
                   });
               }
 
               private void showImport() {
                   View v = getLayoutInflater().inflate(R.layout.dialog_import_profile, null);
                   EditText input = v.findViewById(R.id.profile_input);
-                  new AlertDialog.Builder(this).setTitle("Import Profile").setView(v)
+                  new AlertDialog.Builder(this)
+                      .setTitle("Import Profile")
+                      .setView(v)
                       .setPositiveButton("Import", (d, w) -> {
-                          String t = input.getText().toString().trim();
-                          if (!t.isEmpty()) doImport(t);
-                      }).setNegativeButton("Cancel", null).show();
+                          String text = input.getText().toString().trim();
+                          if (!text.isEmpty()) doImport(text);
+                      })
+                      .setNegativeButton("Cancel", null)
+                      .show();
               }
 
-              private void doImport(String enc) {
+              private void doImport(String encryptedData) {
                   try {
-                      profile = pm.importProfile(enc);
-                      if (profile.isExpired()) { showExpired(); return; }
-                      Toast.makeText(this, "Imported! " + profile.remainingDays() + " days", Toast.LENGTH_LONG).show();
+                      profile = pm.importProfile(encryptedData);
+                      if (profile.isExpired()) {
+                          showExpired();
+                          return;
+                      }
+                      Toast.makeText(this, "Profile imported! " + profile.remainingDays() + " days remaining",
+                          Toast.LENGTH_LONG).show();
                       refreshUI();
                   } catch (Exception e) {
-                      Log.e(TAG, "Import fail", e);
-                      Toast.makeText(this, "Invalid: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                      Log.e(TAG, "Import failed", e);
+                      Toast.makeText(this, "Invalid profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
                   }
               }
 
-              private void scanQr() {
+              private void launchQrScanner() {
                   try {
-                      Intent i = new Intent("com.google.zxing.client.android.SCAN");
-                      i.putExtra("SCAN_MODE", "QR_CODE_MODE");
-                      startActivityForResult(i, QR_REQ);
-                  } catch (Exception e) { Toast.makeText(this, "Install QR scanner or paste manually", Toast.LENGTH_LONG).show(); }
+                      Intent intent = new Intent(this, QrScannerActivity.class);
+                      startActivityForResult(intent, QR_REQ);
+                  } catch (Exception e) {
+                      Log.e(TAG, "QR scanner launch failed", e);
+                      Toast.makeText(this, "QR scanner not available. Use paste instead.", Toast.LENGTH_LONG).show();
+                  }
               }
 
               private void showExpired() {
-                  new AlertDialog.Builder(this).setTitle("Subscription Expired")
-                      .setMessage("Contact support to renew.")
-                      .setPositiveButton("Support", (d, w) -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/vpnproxytestsupport"))))
-                      .setNegativeButton("Close", null).setCancelable(false).show();
+                  new AlertDialog.Builder(this)
+                      .setTitle("Subscription Expired")
+                      .setMessage("Your VPN subscription has expired. Contact support to renew.")
+                      .setPositiveButton("Contact Support", (d, w) ->
+                          startActivity(new Intent(Intent.ACTION_VIEW,
+                              Uri.parse("https://t.me/vpnproxytestsupport"))))
+                      .setNegativeButton("Close", null)
+                      .setCancelable(false)
+                      .show();
               }
           }
           JAVAEOF
@@ -930,27 +1351,162 @@ jobs:
         run: |
           cd ss-full/src/frontends/android
           python3 << 'PYEOF'
-          with open("app/src/main/AndroidManifest.xml", "r") as f: content = f.read()
-          content = content.replace('<category android:name="android.intent.category.LAUNCHER" />', '<!-- moved -->')
+          with open("app/src/main/AndroidManifest.xml", "r") as f:
+              content = f.read()
+
+          # Remove existing LAUNCHER categories
+          content = content.replace(
+              '<category android:name="android.intent.category.LAUNCHER" />',
+              '<!-- launcher moved to AsadMainActivity -->')
+
+          # Add camera permission if not present
+          if 'android.permission.CAMERA' not in content:
+              content = content.replace(
+                  '<application',
+                  '<uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n\n    <application')
+
+          # Add our activities before </application>
           content = content.replace('</application>', '''
-                  <activity android:name=".ui.AsadMainActivity" android:label="AsadVPN"
-                      android:exported="true" android:theme="@style/ApplicationTheme">
+                  <activity android:name=".ui.AsadMainActivity"
+                      android:label="AsadVPN"
+                      android:exported="true"
+                      android:theme="@style/ApplicationTheme">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
+                  <activity android:name=".ui.QrScannerActivity"
+                      android:label="Scan QR Code"
+                      android:exported="false"
+                      android:theme="@style/ApplicationTheme"
+                      android:screenOrientation="portrait" />
+                  <meta-data
+                      android:name="com.google.android.gms.vision.DEPENDENCIES"
+                      android:value="barcode" />
               </application>''')
-          with open("app/src/main/AndroidManifest.xml", "w") as f: f.write(content)
+
+          with open("app/src/main/AndroidManifest.xml", "w") as f:
+              f.write(content)
           PYEOF
+
+      - name: Add Google Play Services Vision dependency
+        run: |
+          cd ss-full/src/frontends/android
+          python3 << 'PYEOF'
+          with open("app/build.gradle", "r") as f:
+              content = f.read()
+
+          # Add play-services-vision dependency
+          if 'play-services-vision' not in content:
+              content = content.replace(
+                  'dependencies {',
+                  "dependencies {\n    implementation 'com.google.android.gms:play-services-vision:20.1.3'")
+
+          with open("app/build.gradle", "w") as f:
+              f.write(content)
+          PYEOF
+
+      - name: Inspect strongSwan VPN connection API
+        run: |
+          cd ss-full/src/frontends/android
+          echo "=== VpnStateService.connect() signature ==="
+          grep -n "public void connect\|void connect" app/src/main/java/org/strongswan/android/logic/VpnStateService.java | head -5
+          echo "=== KEY_ constants in VpnProfileDataSource ==="
+          grep -n "KEY_UUID\|KEY_USERNAME\|KEY_PASSWORD\|public static" app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java | head -20
+          echo "=== VpnProfile setter methods ==="
+          grep -n "public void set\|public void setCert\|public void setRemote\|public void setIke\|public void setEsp\|public void setMTU\|public void setSplit" app/src/main/java/org/strongswan/android/data/VpnProfile.java | head -20
+          echo "=== VpnType enum ==="
+          grep -n "IKEV2_EAP\|EAP" app/src/main/java/org/strongswan/android/data/VpnType.java | head -10
+          echo "=== CharonVpnService profile loading ==="
+          grep -n "KEY_UUID\|getUsername\|getPassword\|getCertificateAlias\|profileInfo\|Bundle" app/src/main/java/org/strongswan/android/logic/CharonVpnService.java | head -20
+          echo "=== LocalCertificateStore or TrustedCertificateManager ==="
+          find app/src/main/java -name "*.java" | xargs grep -l "LocalCertificateStore\|keychain" 2>/dev/null | head -5
+          echo "=== VpnProfileSource check ==="
+          find app/src/main/java -name "VpnProfileSource.java" 2>/dev/null
+          echo "=== VpnProfileDataSource constructors ==="
+          grep -n "public VpnProfileDataSource\|public.*VpnProfileDataSource" app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java | head -5
+
+      - name: Adapt to strongSwan API
+        run: |
+          cd ss-full/src/frontends/android
+          echo "=== Checking actual API signatures ==="
+          VPNSTATE="app/src/main/java/org/strongswan/android/logic/VpnStateService.java"
+          DATASRC="app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java"
+          VPNPROF="app/src/main/java/org/strongswan/android/data/VpnProfile.java"
+          CHARON="app/src/main/java/org/strongswan/android/logic/CharonVpnService.java"
+
+          echo "--- connect method ---"
+          grep -A3 "void connect(" "${VPNSTATE}" || true
+          echo "--- KEY_ fields ---"
+          grep "KEY_" "${DATASRC}" | head -10 || true
+          echo "--- Profile setters ---"
+          grep "public void set" "${VPNPROF}" | head -20 || true
+          echo "--- Charon profile bundle ---"
+          grep -B2 -A5 "KEY_UUID\|profileInfo\|username\|password" "${CHARON}" | head -30 || true
+          echo "--- insertProfile return type ---"
+          grep -A2 "insertProfile\|public.*insert" "${DATASRC}" | head -10 || true
+
+          # Check if there's a VpnProfileSource wrapper
+          if [ ! -f "app/src/main/java/org/strongswan/android/data/VpnProfileSource.java" ]; then
+            echo "No VpnProfileSource.java found - using VpnProfileDataSource directly"
+          fi
+
+          # Fix AsadMainActivity based on actual API
+          python3 << 'PYFIX'
+          import re
+
+          # Read the current AsadMainActivity
+          with open("app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java", "r") as f:
+              code = f.read()
+
+          # Read VpnStateService to understand connect() signature
+          with open("app/src/main/java/org/strongswan/android/logic/VpnStateService.java", "r") as f:
+              vss = f.read()
+
+          # Check connect method signature
+          if "connect(Bundle" in vss:
+              print("connect(Bundle profileInfo, boolean fromScratch) - API matches")
+          elif "connect(VpnProfile" in vss:
+              print("connect(VpnProfile ...) - Need to adapt")
+              # Replace the connect call
+              code = code.replace(
+                  "svc.connect(profileInfo, true);",
+                  "svc.connect(pendingProfile, true);")
+
+          # Read VpnProfileDataSource for KEY_ constants
+          with open("app/src/main/java/org/strongswan/android/data/VpnProfileDataSource.java", "r") as f:
+              ds = f.read()
+
+          if "KEY_UUID" not in ds:
+              print("KEY_UUID not in VpnProfileDataSource, checking alternatives")
+              # Try to find what constants exist
+              for line in ds.split('\n'):
+                  if 'KEY_' in line and 'static' in line:
+                      print("  Found: " + line.strip())
+
+          with open("app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java", "w") as f:
+              f.write(code)
+          PYFIX
 
       - name: Pre-build check
         run: |
           cd ss-full/src/frontends/android
+          echo "=== build.gradle applicationId ==="
           grep "applicationId" app/build.gradle
+          echo "=== AndroidManifest authorities ==="
           grep "authorities" app/src/main/AndroidManifest.xml
+          echo "=== LAUNCHER count ==="
           grep -c "LAUNCHER" app/src/main/AndroidManifest.xml
+          echo "=== play-services-vision dependency ==="
+          grep "play-services" app/build.gradle
+          echo "=== Custom Java files ==="
           find app/src/main/java/org/strongswan/android -name "*.java" -newer app/build.gradle | sort
+          echo "=== QR Scanner files ==="
+          ls -la app/src/main/java/org/strongswan/android/ui/QrScannerActivity.java 2>/dev/null || echo "MISSING"
+          ls -la app/src/main/res/layout/activity_qr_scanner.xml 2>/dev/null || echo "MISSING"
+          echo "=== CertificateImporter signature ==="
+          grep "public static" app/src/main/java/org/strongswan/android/logic/CertificateImporter.java
 
       - name: Build APK
         run: |
@@ -962,9 +1518,15 @@ jobs:
           RESULT=${PIPESTATUS[0]}
           set -e
           if [ ${RESULT} -ne 0 ]; then
-            echo "BUILD FAILED"
+            echo "========================================"
+            echo "BUILD FAILED - Analyzing errors"
+            echo "========================================"
+            echo "=== Java compilation errors ==="
             grep -E "error:" "${GITHUB_WORKSPACE}/build.log" | grep -v "Exception\|ProcessException\|CXX1429\|error when building\|IssueReporter\|TaskExecution\|EventFiring\|DefaultBuild" | head -30
-            grep -B2 "cannot find symbol\|incompatible types" "${GITHUB_WORKSPACE}/build.log" | head -20
+            echo "=== Cannot find symbol ==="
+            grep -B2 -A2 "cannot find symbol\|incompatible types\|method.*not found" "${GITHUB_WORKSPACE}/build.log" | head -40
+            echo "=== Package errors ==="
+            grep -B1 "package.*does not exist\|cannot be applied" "${GITHUB_WORKSPACE}/build.log" | head -20
             exit 1
           fi
 
