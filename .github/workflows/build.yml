@@ -297,11 +297,11 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <string name="asad_title">AsadVPN</string>
-              <string name="asad_subtitle">Unlimited • Fast</string>
+              <string name="asad_subtitle">Unlimited \u2022 Fast</string>
               <string name="status_disconnected">Disconnected</string>
               <string name="status_connected">Connected</string>
-              <string name="status_connecting">Connecting…</string>
-              <string name="status_disconnecting">Disconnecting…</string>
+              <string name="status_connecting">Connecting\u2026</string>
+              <string name="status_disconnecting">Disconnecting\u2026</string>
               <string name="status_no_profile">No Profile</string>
               <string name="status_expired">Expired</string>
               <string name="btn_connect">CONNECT</string>
@@ -317,7 +317,7 @@ jobs:
               <string name="days_remaining">%d days remaining</string>
               <string name="day_remaining">%d day remaining</string>
               <string name="import_prompt">Paste your encrypted profile code below:</string>
-              <string name="import_hint">Paste encrypted profile here…</string>
+              <string name="import_hint">Paste encrypted profile here\u2026</string>
               <string name="import_title">Import Profile</string>
               <string name="import_btn_ok">Import</string>
               <string name="import_btn_cancel">Cancel</string>
@@ -327,7 +327,7 @@ jobs:
               <string name="import_first">Import a profile first</string>
               <string name="import_needed">Import a profile to get started</string>
               <string name="no_update_url">No update URL configured</string>
-              <string name="updating">Updating…</string>
+              <string name="updating">Updating\u2026</string>
               <string name="servers_updated">Servers updated!</string>
               <string name="update_failed">Update failed: %s</string>
               <string name="imported_days">Imported! %d days remaining</string>
@@ -341,19 +341,22 @@ jobs:
               <string name="scan_qr_title">Scan QR Code</string>
               <string name="scan_qr_desc">Point camera at your AsadVPN QR code</string>
               <string name="expired_title">Subscription Expired</string>
-              <string name="expired_msg">Your subscription has expired.\nContact support to renew.</string>
-              <string name="expired_support">\uD83D\uDCE9 Support</string>
+              <string name="expired_msg">Your subscription has expired.\nContact support on Telegram to renew.</string>
+              <string name="expired_support">\uD83D\uDCE9 Renew on Telegram</string>
               <string name="expired_close">Close</string>
               <string name="last_sync">Last sync: %s</string>
               <string name="connected_to">Connected to %s</string>
-              <string name="theme_label">\uD83C\uDFA8 Theme</string>
-              <string name="lang_label">EN | فا</string>
+              <string name="theme_label">\uD83C\uDFA8</string>
+              <string name="lang_label">EN | \u0641\u0627</string>
               <string name="renew_title">Subscription Expiring Soon</string>
               <string name="renew_msg">Your subscription expires in %d day(s).\nRenew now to avoid service interruption.</string>
-              <string name="renew_btn">\uD83D\uDCE9 Renew Now</string>
+              <string name="renew_btn">\uD83D\uDCE9 Renew on Telegram</string>
               <string name="renew_dismiss">Later</string>
-              <string name="selecting_server">Selecting best server…</string>
+              <string name="selecting_server">Finding best server\u2026</string>
               <string name="auto_selected">Auto-selected: %s</string>
+              <string name="trying_server">Trying %s (%d/%d)\u2026</string>
+              <string name="all_servers_failed">All servers failed to connect</string>
+              <string name="server_auth_failed">Auth failed on %s, trying next\u2026</string>
           </resources>
           XML_EOF
 
@@ -364,63 +367,66 @@ jobs:
           <resources>
               <string name="app_name">AsadVPN</string>
               <string name="asad_title">AsadVPN</string>
-              <string name="asad_subtitle">نامحدود • سریع</string>
-              <string name="status_disconnected">قطع شده</string>
-              <string name="status_connected">متصل</string>
-              <string name="status_connecting">در حال اتصال…</string>
-              <string name="status_disconnecting">در حال قطع…</string>
-              <string name="status_no_profile">بدون پروفایل</string>
-              <string name="status_expired">منقضی شده</string>
-              <string name="btn_connect">اتصال</string>
-              <string name="btn_disconnect">قطع</string>
-              <string name="btn_cancel">لغو</string>
-              <string name="btn_wait">صبر کنید</string>
-              <string name="btn_import">وارد کردن</string>
-              <string name="btn_expired">منقضی</string>
-              <string name="auto_fastest">خودکار (سریع‌ترین)</string>
-              <string name="import_profile">وارد کردن پروفایل</string>
-              <string name="scan_qr">اسکن کد QR</string>
-              <string name="update_servers">\u21BB بروزرسانی سرورها</string>
-              <string name="days_remaining">%d روز باقیمانده</string>
-              <string name="day_remaining">%d روز باقیمانده</string>
-              <string name="import_prompt">کد رمزنگاری‌شده پروفایل خود را وارد کنید:</string>
-              <string name="import_hint">پروفایل رمزنگاری‌شده را اینجا بچسبانید…</string>
-              <string name="import_title">وارد کردن پروفایل</string>
-              <string name="import_btn_ok">وارد کردن</string>
-              <string name="import_btn_cancel">لغو</string>
-              <string name="secure_label">\uD83D\uDD12 امن</string>
-              <string name="ready_label">آماده</string>
-              <string name="no_servers">سروری یافت نشد</string>
-              <string name="import_first">ابتدا پروفایل وارد کنید</string>
-              <string name="import_needed">برای شروع یک پروفایل وارد کنید</string>
-              <string name="no_update_url">آدرس بروزرسانی موجود نیست</string>
-              <string name="updating">در حال بروزرسانی…</string>
-              <string name="servers_updated">سرورها بروز شدند!</string>
-              <string name="update_failed">بروزرسانی ناموفق: %s</string>
-              <string name="imported_days">وارد شد! %d روز باقیمانده</string>
-              <string name="invalid_profile">نامعتبر: %s</string>
-              <string name="cert_failed">وارد کردن گواهی CA ناموفق بود</string>
-              <string name="save_failed">ذخیره ناموفق</string>
-              <string name="vpn_failed">خطا: %s</string>
-              <string name="qr_unavailable">اسکنر QR در دسترس نیست</string>
-              <string name="camera_required">مجوز دوربین لازم است</string>
-              <string name="qr_not_available">QR در دسترس نیست</string>
-              <string name="scan_qr_title">اسکن کد QR</string>
-              <string name="scan_qr_desc">دوربین را به سمت کد QR بگیرید</string>
-              <string name="expired_title">اشتراک منقضی شده</string>
-              <string name="expired_msg">اشتراک شما منقضی شده است.\nبرای تمدید با پشتیبانی تماس بگیرید.</string>
-              <string name="expired_support">\uD83D\uDCE9 پشتیبانی</string>
-              <string name="expired_close">بستن</string>
-              <string name="last_sync">آخرین همگام‌سازی: %s</string>
-              <string name="connected_to">متصل به %s</string>
-              <string name="theme_label">\uD83C\uDFA8 تم</string>
-              <string name="lang_label">EN | فا</string>
-              <string name="renew_title">اشتراک در حال انقضا</string>
-              <string name="renew_msg">اشتراک شما تا %d روز دیگر منقضی می‌شود.\nبرای جلوگیری از قطع سرویس همین حالا تمدید کنید.</string>
-              <string name="renew_btn">\uD83D\uDCE9 تمدید اشتراک</string>
-              <string name="renew_dismiss">بعداً</string>
-              <string name="selecting_server">انتخاب بهترین سرور…</string>
-              <string name="auto_selected">انتخاب خودکار: %s</string>
+              <string name="asad_subtitle">\u0646\u0627\u0645\u062d\u062f\u0648\u062f \u2022 \u0633\u0631\u06cc\u0639</string>
+              <string name="status_disconnected">\u0642\u0637\u0639 \u0634\u062f\u0647</string>
+              <string name="status_connected">\u0645\u062a\u0635\u0644</string>
+              <string name="status_connecting">\u062f\u0631 \u062d\u0627\u0644 \u0627\u062a\u0635\u0627\u0644\u2026</string>
+              <string name="status_disconnecting">\u062f\u0631 \u062d\u0627\u0644 \u0642\u0637\u0639\u2026</string>
+              <string name="status_no_profile">\u0628\u062f\u0648\u0646 \u067e\u0631\u0648\u0641\u0627\u06cc\u0644</string>
+              <string name="status_expired">\u0645\u0646\u0642\u0636\u06cc \u0634\u062f\u0647</string>
+              <string name="btn_connect">\u0627\u062a\u0635\u0627\u0644</string>
+              <string name="btn_disconnect">\u0642\u0637\u0639</string>
+              <string name="btn_cancel">\u0644\u063a\u0648</string>
+              <string name="btn_wait">\u0635\u0628\u0631 \u06a9\u0646\u06cc\u062f</string>
+              <string name="btn_import">\u0648\u0627\u0631\u062f \u06a9\u0631\u062f\u0646</string>
+              <string name="btn_expired">\u0645\u0646\u0642\u0636\u06cc</string>
+              <string name="auto_fastest">\u062e\u0648\u062f\u06a9\u0627\u0631 (\u0633\u0631\u06cc\u0639\u200c\u062a\u0631\u06cc\u0646)</string>
+              <string name="import_profile">\u0648\u0627\u0631\u062f \u06a9\u0631\u062f\u0646 \u067e\u0631\u0648\u0641\u0627\u06cc\u0644</string>
+              <string name="scan_qr">\u0627\u0633\u06a9\u0646 \u06a9\u062f QR</string>
+              <string name="update_servers">\u21BB \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06cc \u0633\u0631\u0648\u0631\u0647\u0627</string>
+              <string name="days_remaining">%d \u0631\u0648\u0632 \u0628\u0627\u0642\u06cc\u0645\u0627\u0646\u062f\u0647</string>
+              <string name="day_remaining">%d \u0631\u0648\u0632 \u0628\u0627\u0642\u06cc\u0645\u0627\u0646\u062f\u0647</string>
+              <string name="import_prompt">\u06a9\u062f \u0631\u0645\u0632\u0646\u06af\u0627\u0631\u06cc\u200c\u0634\u062f\u0647 \u067e\u0631\u0648\u0641\u0627\u06cc\u0644 \u062e\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f:</string>
+              <string name="import_hint">\u067e\u0631\u0648\u0641\u0627\u06cc\u0644 \u0631\u0645\u0632\u0646\u06af\u0627\u0631\u06cc\u200c\u0634\u062f\u0647 \u0631\u0627 \u0627\u06cc\u0646\u062c\u0627 \u0628\u0686\u0633\u0628\u0627\u0646\u06cc\u062f\u2026</string>
+              <string name="import_title">\u0648\u0627\u0631\u062f \u06a9\u0631\u062f\u0646 \u067e\u0631\u0648\u0641\u0627\u06cc\u0644</string>
+              <string name="import_btn_ok">\u0648\u0627\u0631\u062f \u06a9\u0631\u062f\u0646</string>
+              <string name="import_btn_cancel">\u0644\u063a\u0648</string>
+              <string name="secure_label">\uD83D\uDD12 \u0627\u0645\u0646</string>
+              <string name="ready_label">\u0622\u0645\u0627\u062f\u0647</string>
+              <string name="no_servers">\u0633\u0631\u0648\u0631\u06cc \u06cc\u0627\u0641\u062a \u0646\u0634\u062f</string>
+              <string name="import_first">\u0627\u0628\u062a\u062f\u0627 \u067e\u0631\u0648\u0641\u0627\u06cc\u0644 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f</string>
+              <string name="import_needed">\u0628\u0631\u0627\u06cc \u0634\u0631\u0648\u0639 \u06cc\u06a9 \u067e\u0631\u0648\u0641\u0627\u06cc\u0644 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f</string>
+              <string name="no_update_url">\u0622\u062f\u0631\u0633 \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06cc \u0645\u0648\u062c\u0648\u062f \u0646\u06cc\u0633\u062a</string>
+              <string name="updating">\u062f\u0631 \u062d\u0627\u0644 \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06cc\u2026</string>
+              <string name="servers_updated">\u0633\u0631\u0648\u0631\u0647\u0627 \u0628\u0631\u0648\u0632 \u0634\u062f\u0646\u062f!</string>
+              <string name="update_failed">\u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06cc \u0646\u0627\u0645\u0648\u0641\u0642: %s</string>
+              <string name="imported_days">\u0648\u0627\u0631\u062f \u0634\u062f! %d \u0631\u0648\u0632 \u0628\u0627\u0642\u06cc\u0645\u0627\u0646\u062f\u0647</string>
+              <string name="invalid_profile">\u0646\u0627\u0645\u0639\u062a\u0628\u0631: %s</string>
+              <string name="cert_failed">\u0648\u0627\u0631\u062f \u06a9\u0631\u062f\u0646 \u06af\u0648\u0627\u0647\u06cc CA \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062f</string>
+              <string name="save_failed">\u0630\u062e\u06cc\u0631\u0647 \u0646\u0627\u0645\u0648\u0641\u0642</string>
+              <string name="vpn_failed">\u062e\u0637\u0627: %s</string>
+              <string name="qr_unavailable">\u0627\u0633\u06a9\u0646\u0631 QR \u062f\u0631 \u062f\u0633\u062a\u0631\u0633 \u0646\u06cc\u0633\u062a</string>
+              <string name="camera_required">\u0645\u062c\u0648\u0632 \u062f\u0648\u0631\u0628\u06cc\u0646 \u0644\u0627\u0632\u0645 \u0627\u0633\u062a</string>
+              <string name="qr_not_available">QR \u062f\u0631 \u062f\u0633\u062a\u0631\u0633 \u0646\u06cc\u0633\u062a</string>
+              <string name="scan_qr_title">\u0627\u0633\u06a9\u0646 \u06a9\u062f QR</string>
+              <string name="scan_qr_desc">\u062f\u0648\u0631\u0628\u06cc\u0646 \u0631\u0627 \u0628\u0647 \u0633\u0645\u062a \u06a9\u062f QR \u0628\u06af\u06cc\u0631\u06cc\u062f</string>
+              <string name="expired_title">\u0627\u0634\u062a\u0631\u0627\u06a9 \u0645\u0646\u0642\u0636\u06cc \u0634\u062f\u0647</string>
+              <string name="expired_msg">\u0627\u0634\u062a\u0631\u0627\u06a9 \u0634\u0645\u0627 \u0645\u0646\u0642\u0636\u06cc \u0634\u062f\u0647 \u0627\u0633\u062a.\n\u0628\u0631\u0627\u06cc \u062a\u0645\u062f\u06cc\u062f \u062f\u0631 \u062a\u0644\u06af\u0631\u0627\u0645 \u0628\u0627 \u067e\u0634\u062a\u06cc\u0628\u0627\u0646\u06cc \u062a\u0645\u0627\u0633 \u0628\u06af\u06cc\u0631\u06cc\u062f.</string>
+              <string name="expired_support">\uD83D\uDCE9 \u062a\u0645\u062f\u06cc\u062f \u062f\u0631 \u062a\u0644\u06af\u0631\u0627\u0645</string>
+              <string name="expired_close">\u0628\u0633\u062a\u0646</string>
+              <string name="last_sync">\u0622\u062e\u0631\u06cc\u0646 \u0647\u0645\u06af\u0627\u0645\u200c\u0633\u0627\u0632\u06cc: %s</string>
+              <string name="connected_to">\u0645\u062a\u0635\u0644 \u0628\u0647 %s</string>
+              <string name="theme_label">\uD83C\uDFA8</string>
+              <string name="lang_label">EN | \u0641\u0627</string>
+              <string name="renew_title">\u0627\u0634\u062a\u0631\u0627\u06a9 \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u0642\u0636\u0627</string>
+              <string name="renew_msg">\u0627\u0634\u062a\u0631\u0627\u06a9 \u0634\u0645\u0627 \u062a\u0627 %d \u0631\u0648\u0632 \u062f\u06cc\u06af\u0631 \u0645\u0646\u0642\u0636\u06cc \u0645\u06cc\u200c\u0634\u0648\u062f.\n\u0628\u0631\u0627\u06cc \u062c\u0644\u0648\u06af\u06cc\u0631\u06cc \u0627\u0632 \u0642\u0637\u0639 \u0633\u0631\u0648\u06cc\u0633 \u0647\u0645\u06cc\u0646 \u062d\u0627\u0644\u0627 \u062a\u0645\u062f\u06cc\u062f \u06a9\u0646\u06cc\u062f.</string>
+              <string name="renew_btn">\uD83D\uDCE9 \u062a\u0645\u062f\u06cc\u062f \u062f\u0631 \u062a\u0644\u06af\u0631\u0627\u0645</string>
+              <string name="renew_dismiss">\u0628\u0639\u062f\u0627\u064b</string>
+              <string name="selecting_server">\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u0647\u062a\u0631\u06cc\u0646 \u0633\u0631\u0648\u0631\u2026</string>
+              <string name="auto_selected">\u0627\u0646\u062a\u062e\u0627\u0628 \u062e\u0648\u062f\u06a9\u0627\u0631: %s</string>
+              <string name="trying_server">\u062a\u0644\u0627\u0634 %s (%d/%d)\u2026</string>
+              <string name="all_servers_failed">\u0627\u062a\u0635\u0627\u0644 \u0628\u0647 \u0647\u0645\u0647 \u0633\u0631\u0648\u0631\u0647\u0627 \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062f</string>
+              <string name="server_auth_failed">\u062e\u0637\u0627 \u062f\u0631 %s\u060c \u062a\u0644\u0627\u0634 \u0628\u0639\u062f\u06cc\u2026</string>
           </resources>
           XML_EOF
 
@@ -436,14 +442,14 @@ jobs:
                   android:orientation="horizontal" android:gravity="center_vertical">
                   <Button android:id="@+id/lang_toggle" android:layout_width="wrap_content"
                       android:layout_height="36dp" android:text="@string/lang_label"
-                      android:textSize="12sp" android:textColor="#00d4aa"
+                      android:textSize="13sp" android:textColor="#00d4aa"
                       android:backgroundTint="#222244" android:minWidth="72dp"
                       android:paddingLeft="10dp" android:paddingRight="10dp"/>
                   <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
                   <Button android:id="@+id/theme_toggle" android:layout_width="wrap_content"
                       android:layout_height="36dp" android:text="@string/theme_label"
-                      android:textSize="12sp" android:textColor="#00d4aa"
-                      android:backgroundTint="#222244" android:minWidth="72dp"
+                      android:textSize="16sp" android:textColor="#00d4aa"
+                      android:backgroundTint="#222244" android:minWidth="52dp"
                       android:paddingLeft="10dp" android:paddingRight="10dp"/>
               </LinearLayout>
               <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -526,19 +532,33 @@ jobs:
           </FrameLayout>
           XML_EOF
 
+          # ── Drawables ──
           mkdir -p "${RES_DIR}/drawable"
           cat > "${RES_DIR}/drawable/circle_button_connect.xml" << 'XML_EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <selector xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="#008866"/><stroke android:width="3dp" android:color="#00d4aa"/></shape></item>
+              <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="#007755"/><stroke android:width="3dp" android:color="#00d4aa"/></shape></item>
               <item><shape android:shape="oval"><solid android:color="#00aa88"/><stroke android:width="3dp" android:color="#00d4aa"/></shape></item>
           </selector>
           XML_EOF
           cat > "${RES_DIR}/drawable/circle_button_disconnect.xml" << 'XML_EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <selector xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="#cc3333"/><stroke android:width="3dp" android:color="#ff4444"/></shape></item>
-              <item><shape android:shape="oval"><solid android:color="#dd4444"/><stroke android:width="3dp" android:color="#ff4444"/></shape></item>
+              <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="#aa2222"/><stroke android:width="3dp" android:color="#ff4444"/></shape></item>
+              <item><shape android:shape="oval"><solid android:color="#cc3333"/><stroke android:width="3dp" android:color="#ff4444"/></shape></item>
+          </selector>
+          XML_EOF
+          cat > "${RES_DIR}/drawable/circle_button_expired.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item><shape android:shape="oval"><solid android:color="#444444"/><stroke android:width="3dp" android:color="#666666"/></shape></item>
+          </selector>
+          XML_EOF
+          cat > "${RES_DIR}/drawable/circle_button_connecting.xml" << 'XML_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <selector xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="#cc8800"/><stroke android:width="3dp" android:color="#ffaa00"/></shape></item>
+              <item><shape android:shape="oval"><solid android:color="#dd9900"/><stroke android:width="3dp" android:color="#ffaa00"/></shape></item>
           </selector>
           XML_EOF
           cat > "${RES_DIR}/drawable/qr_frame.xml" << 'XML_EOF'
@@ -665,7 +685,6 @@ jobs:
                       X509Certificate cert = (X509Certificate) cf.generateCertificate(bis);
                       bis.close();
                       cert.checkValidity();
-
                       LocalCertificateStore store = new LocalCertificateStore();
                       boolean added = store.addCertificate(cert);
                       if (added) {
@@ -709,7 +728,7 @@ jobs:
               private final SharedPreferences prefs;
 
               public ProfileManager(Context ctx) {
-                  this.prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                  this.prefs = ctx.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
               }
 
               public ProfileCrypto.ProfileData importProfile(String encData) throws Exception {
@@ -817,6 +836,8 @@ jobs:
           import java.net.InetSocketAddress;
           import java.net.Socket;
           import java.util.ArrayList;
+          import java.util.Collections;
+          import java.util.Comparator;
           import java.util.List;
           import java.util.concurrent.*;
 
@@ -825,9 +846,20 @@ jobs:
               private static final int[] PROBE_PORTS = {4500, 500, 443, 80};
               private static final int TIMEOUT_MS = 3000;
 
-              public static ProfileCrypto.ServerInfo findFastest(ProfileCrypto.ServerInfo[] servers) {
-                  if (servers == null || servers.length == 0) return null;
-                  if (servers.length == 1) return servers[0];
+              public static class RankedServer {
+                  public ProfileCrypto.ServerInfo server;
+                  public long latencyMs;
+                  public RankedServer(ProfileCrypto.ServerInfo s, long ms) { server = s; latencyMs = ms; }
+              }
+
+              /** Returns ALL servers sorted by latency (fastest first) */
+              public static List<RankedServer> rankServers(ProfileCrypto.ServerInfo[] servers) {
+                  List<RankedServer> result = new ArrayList<>();
+                  if (servers == null || servers.length == 0) return result;
+                  if (servers.length == 1) {
+                      result.add(new RankedServer(servers[0], 0));
+                      return result;
+                  }
 
                   int count = Math.min(servers.length, 10);
                   ExecutorService exec = Executors.newFixedThreadPool(count);
@@ -837,7 +869,6 @@ jobs:
                       final int idx = i;
                       futures.add(exec.submit(() -> {
                           long bestTime = Long.MAX_VALUE;
-                          /* Try TCP connect to multiple ports */
                           for (int port : PROBE_PORTS) {
                               try {
                                   long start = System.currentTimeMillis();
@@ -847,28 +878,22 @@ jobs:
                                   sock.close();
                                   Log.d(TAG, servers[idx].address + ":" + port + " = " + elapsed + "ms");
                                   if (elapsed < bestTime) bestTime = elapsed;
-                                  break; /* success on this port, stop trying others */
+                                  break;
                               } catch (Exception e) {
-                                  Log.d(TAG, servers[idx].address + ":" + port + " fail: " + e.getMessage());
+                                  Log.d(TAG, servers[idx].address + ":" + port + " fail");
                               }
                           }
-                          /* Fallback: DNS resolution latency */
                           if (bestTime == Long.MAX_VALUE) {
                               try {
                                   long start = System.currentTimeMillis();
                                   java.net.InetAddress.getByName(servers[idx].address);
-                                  bestTime = System.currentTimeMillis() - start + 500; /* penalty */
-                                  Log.d(TAG, servers[idx].address + " DNS = " + bestTime + "ms (with penalty)");
-                              } catch (Exception e) {
-                                  Log.d(TAG, servers[idx].address + " DNS fail");
-                              }
+                                  bestTime = System.currentTimeMillis() - start + 500;
+                              } catch (Exception e) { /* keep MAX_VALUE */ }
                           }
                           return new long[]{idx, bestTime};
                       }));
                   }
 
-                  int bestIdx = 0;
-                  long bestMs = Long.MAX_VALUE;
                   try {
                       exec.shutdown();
                       exec.awaitTermination(6, TimeUnit.SECONDS);
@@ -876,20 +901,32 @@ jobs:
                           try {
                               if (f.isDone()) {
                                   long[] r = f.get();
-                                  Log.i(TAG, servers[(int)r[0]].address + " latency=" + r[1] + "ms");
-                                  if (r[1] < bestMs) { bestMs = r[1]; bestIdx = (int)r[0]; }
+                                  int idx = (int)r[0];
+                                  Log.i(TAG, servers[idx].address + " latency=" + r[1] + "ms");
+                                  result.add(new RankedServer(servers[idx], r[1]));
                               }
                           } catch (Exception ignored) {}
                       }
                   } catch (Exception e) { Log.w(TAG, "Executor error", e); }
 
-                  if (bestMs == Long.MAX_VALUE) {
-                      bestIdx = (int)(Math.random() * servers.length);
-                      Log.w(TAG, "All probes failed, random pick: " + servers[bestIdx].address);
-                  } else {
-                      Log.i(TAG, "Winner: " + servers[bestIdx].address + " (" + bestMs + "ms)");
+                  /* Add any servers beyond count limit */
+                  for (int i = count; i < servers.length; i++) {
+                      result.add(new RankedServer(servers[i], Long.MAX_VALUE));
                   }
-                  return servers[bestIdx];
+
+                  Collections.sort(result, (a, b) -> Long.compare(a.latencyMs, b.latencyMs));
+
+                  if (!result.isEmpty()) {
+                      Log.i(TAG, "Ranking: 1st=" + result.get(0).server.address
+                          + " (" + result.get(0).latencyMs + "ms), total=" + result.size());
+                  }
+                  return result;
+              }
+
+              /** Legacy method — returns single fastest */
+              public static ProfileCrypto.ServerInfo findFastest(ProfileCrypto.ServerInfo[] servers) {
+                  List<RankedServer> ranked = rankServers(servers);
+                  return ranked.isEmpty() ? null : ranked.get(0).server;
               }
           }
           JAVA_EOF
@@ -980,10 +1017,13 @@ jobs:
           import android.content.ServiceConnection;
           import android.content.SharedPreferences;
           import android.content.res.Configuration;
+          import android.graphics.Color;
           import android.net.Uri;
           import android.net.VpnService;
           import android.os.Bundle;
+          import android.os.Handler;
           import android.os.IBinder;
+          import android.os.Looper;
           import android.util.Log;
           import android.view.View;
           import android.widget.ArrayAdapter;
@@ -1005,6 +1045,7 @@ jobs:
           import org.strongswan.android.logic.ProfileManager;
           import org.strongswan.android.logic.VpnStateService;
           import org.strongswan.android.logic.VpnStateService.State;
+          import org.strongswan.android.logic.VpnStateService.ErrorState;
 
           import java.text.SimpleDateFormat;
           import java.util.ArrayList;
@@ -1020,13 +1061,20 @@ jobs:
               private static final String KEY_LANG = "language";
               private static final String SUPPORT_URL = "https://t.me/vpnproxytestsupport";
 
-              /* Theme: {bg, accent, card, toggleBg} */
+              /* 7 Themes: {bg, accent, card, toggleBg} */
               private static final int[][] THEMES = {
-                  {0xFF1a1a2e, 0xFF00d4aa, 0xFF333355, 0xFF222244},
-                  {0xFF0d1117, 0xFF58a6ff, 0xFF161b22, 0xFF1a2332},
-                  {0xFF1a1025, 0xFFbb86fc, 0xFF332244, 0xFF2a1a3a},
+                  {0xFF1a1a2e, 0xFF00d4aa, 0xFF333355, 0xFF222244},  /* Dark Teal */
+                  {0xFF0d1117, 0xFF58a6ff, 0xFF161b22, 0xFF1a2332},  /* Ocean Blue */
+                  {0xFF1a1025, 0xFFbb86fc, 0xFF332244, 0xFF2a1a3a},  /* Purple Night */
+                  {0xFF000000, 0xFF00ff88, 0xFF111111, 0xFF1a1a1a},  /* AMOLED Black */
+                  {0xFF0a1a0a, 0xFF4caf50, 0xFF1b2e1b, 0xFF142814},  /* Forest Green */
+                  {0xFF1a1210, 0xFFff7043, 0xFF2e1f1a, 0xFF2a1a14},  /* Sunset Orange */
+                  {0xFF1a1018, 0xFFf48fb1, 0xFF2e1a28, 0xFF2a1420},  /* Rose Pink */
               };
-              private static final String[] THEME_NAMES = {"Dark Teal", "Ocean Blue", "Purple Night"};
+              private static final String[] THEME_NAMES = {
+                  "Dark Teal", "Ocean Blue", "Purple Night", "AMOLED Black",
+                  "Forest Green", "Sunset Orange", "Rose Pink"
+              };
 
               private Button connectBtn, importBtn, scanBtn, updateBtn, langToggle, themeToggle;
               private TextView statusTv, serverTv, daysTv, updateTv;
@@ -1039,8 +1087,14 @@ jobs:
               private String pendingUuid;
               private String connectedServerName;
               private int savedSpinnerPos = 0;
-              private boolean renewalWarningShown = false;
               private SharedPreferences uiPrefs;
+              private Handler mainHandler;
+
+              /* Fallback chain state */
+              private List<FastServerSelector.RankedServer> rankedServers;
+              private int currentServerIndex = 0;
+              private boolean autoConnectInProgress = false;
+              private boolean waitingForAuthResult = false;
 
               private final ServiceConnection svcConn = new ServiceConnection() {
                   public void onServiceConnected(ComponentName n, IBinder b) {
@@ -1053,7 +1107,7 @@ jobs:
 
               @Override
               protected void attachBaseContext(Context newBase) {
-                  SharedPreferences p = newBase.getSharedPreferences(PREFS_UI, MODE_PRIVATE);
+                  SharedPreferences p = newBase.getApplicationContext().getSharedPreferences(PREFS_UI, MODE_PRIVATE);
                   String lang = p.getString(KEY_LANG, "fa");
                   Locale locale = new Locale(lang);
                   Locale.setDefault(locale);
@@ -1064,7 +1118,8 @@ jobs:
 
               @Override protected void onCreate(Bundle si) {
                   super.onCreate(si);
-                  uiPrefs = getSharedPreferences(PREFS_UI, MODE_PRIVATE);
+                  uiPrefs = getApplicationContext().getSharedPreferences(PREFS_UI, MODE_PRIVATE);
+                  mainHandler = new Handler(Looper.getMainLooper());
                   setContentView(R.layout.activity_asadvpn_main);
 
                   rootLayout = findViewById(R.id.root_layout);
@@ -1089,15 +1144,19 @@ jobs:
                   langToggle.setOnClickListener(v -> toggleLanguage());
                   themeToggle.setOnClickListener(v -> cycleTheme());
 
+                  /* Reset spinner to Auto on fresh launch */
+                  savedSpinnerPos = 0;
+
                   applyTheme();
                   bindService(new Intent(this, VpnStateService.class), svcConn, BIND_AUTO_CREATE);
 
-                  /* Show renewal warning on each app open */
+                  /* Check expiry and show appropriate dialogs */
                   profile = pm.getActiveProfile();
-                  if (profile != null && !profile.isExpired()) {
-                      int days = profile.remainingDays();
-                      if (days <= 3) {
-                          showRenewalWarning(days);
+                  if (profile != null) {
+                      if (profile.isExpired()) {
+                          showExpired();
+                      } else if (profile.remainingDays() <= 3) {
+                          showRenewalWarning(profile.remainingDays());
                       }
                   }
               }
@@ -1108,12 +1167,30 @@ jobs:
                   try { unbindService(svcConn); } catch (Exception ignored) {}
               }
 
-              @Override protected void onResume() {
-                  super.onResume();
-                  refreshUI();
-              }
+              @Override protected void onResume() { super.onResume(); refreshUI(); }
 
-              @Override public void stateChanged() { runOnUiThread(this::refreshUI); }
+              @Override public void stateChanged() {
+                  runOnUiThread(() -> {
+                      /* Check if auth failed during auto-connect fallback */
+                      if (autoConnectInProgress && waitingForAuthResult && svc != null) {
+                          State st = svc.getState();
+                          ErrorState err = svc.getErrorState();
+                          if (st == State.DISABLED && err != ErrorState.NO_ERROR) {
+                              /* Connection failed — try next server */
+                              waitingForAuthResult = false;
+                              Log.w(TAG, "Server failed (error=" + err + "), trying next...");
+                              tryNextServer();
+                              return;
+                          } else if (st == State.CONNECTED) {
+                              /* Success! */
+                              autoConnectInProgress = false;
+                              waitingForAuthResult = false;
+                              Log.i(TAG, "Connected successfully to " + connectedServerName);
+                          }
+                      }
+                      refreshUI();
+                  });
+              }
 
               /* ── Language ── */
               private void toggleLanguage() {
@@ -1134,18 +1211,13 @@ jobs:
               private void applyTheme() {
                   int idx = uiPrefs.getInt(KEY_THEME, 0);
                   if (idx < 0 || idx >= THEMES.length) idx = 0;
-                  int bg = THEMES[idx][0];
-                  int accent = THEMES[idx][1];
-                  int toggleBg = THEMES[idx][3];
-
-                  rootLayout.setBackgroundColor(bg);
-                  langToggle.setTextColor(accent);
-                  themeToggle.setTextColor(accent);
-                  updateBtn.setTextColor(accent);
-
+                  rootLayout.setBackgroundColor(THEMES[idx][0]);
+                  langToggle.setTextColor(THEMES[idx][1]);
+                  themeToggle.setTextColor(THEMES[idx][1]);
+                  updateBtn.setTextColor(THEMES[idx][1]);
                   try {
-                      langToggle.getBackground().setTint(toggleBg);
-                      themeToggle.getBackground().setTint(toggleBg);
+                      langToggle.getBackground().setTint(THEMES[idx][3]);
+                      themeToggle.getBackground().setTint(THEMES[idx][3]);
                   } catch (Exception ignored) {}
               }
 
@@ -1154,34 +1226,28 @@ jobs:
                   ArrayList<String> names = new ArrayList<>();
                   names.add(getString(R.string.auto_fastest));
                   if (profile != null && profile.servers != null) {
-                      for (ProfileCrypto.ServerInfo s : profile.servers) {
+                      for (ProfileCrypto.ServerInfo s : profile.servers)
                           names.add(s.name != null ? s.name : s.address);
-                      }
                   }
                   ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                       android.R.layout.simple_spinner_item, names);
                   adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                   serverSpinner.setAdapter(adapter);
-                  if (savedSpinnerPos >= 0 && savedSpinnerPos < names.size()) {
+                  if (savedSpinnerPos >= 0 && savedSpinnerPos < names.size())
                       serverSpinner.setSelection(savedSpinnerPos);
-                  }
               }
 
               /* ── Refresh UI ── */
               private void refreshUI() {
                   profile = pm.getActiveProfile();
-
-                  /* Save spinner position before repopulating */
                   int curPos = serverSpinner.getSelectedItemPosition();
                   if (curPos >= 0) savedSpinnerPos = curPos;
 
                   long lu = pm.getLastUpdateTime();
-                  if (lu > 0) {
-                      updateTv.setText(String.format(getString(R.string.last_sync),
-                          new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(new Date(lu))));
-                  } else {
-                      updateTv.setText("");
-                  }
+                  updateTv.setText(lu > 0
+                      ? String.format(getString(R.string.last_sync),
+                          new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(new Date(lu)))
+                      : "");
 
                   populateSpinner();
 
@@ -1192,6 +1258,7 @@ jobs:
                       connectBtn.setText(getString(R.string.btn_import));
                       connectBtn.setEnabled(true);
                       connectBtn.setBackgroundResource(R.drawable.circle_button_connect);
+                      connectBtn.setTextColor(Color.WHITE);
                       serverSpinner.setVisibility(View.GONE);
                       updateBtn.setVisibility(View.GONE);
                       return;
@@ -1203,39 +1270,49 @@ jobs:
 
                   if (profile.isExpired()) {
                       statusTv.setText(getString(R.string.status_expired));
+                      statusTv.setTextColor(0xFFff4444);
                       daysTv.setText(String.format(getString(R.string.days_remaining), 0));
+                      daysTv.setTextColor(0xFFff4444);
                       serverTv.setText("");
                       connectBtn.setText(getString(R.string.btn_expired));
                       connectBtn.setEnabled(false);
-                      connectBtn.setBackgroundResource(R.drawable.circle_button_connect);
+                      connectBtn.setBackgroundResource(R.drawable.circle_button_expired);
+                      connectBtn.setTextColor(0xFF999999);
                       return;
                   }
 
+                  statusTv.setTextColor(Color.WHITE);
                   int d = profile.remainingDays();
                   daysTv.setText(String.format(
                       getString(d != 1 ? R.string.days_remaining : R.string.day_remaining), d));
+                  daysTv.setTextColor(d <= 3 ? 0xFFff6600 : 0xFFffcc00);
 
                   State st = svc != null ? svc.getState() : State.DISABLED;
                   switch (st) {
                       case CONNECTED:
                           statusTv.setText(getString(R.string.status_connected));
+                          statusTv.setTextColor(0xFF00dd88);
                           serverTv.setText(connectedServerName != null
                               ? String.format(getString(R.string.connected_to), connectedServerName)
                               : getString(R.string.secure_label));
                           connectBtn.setText(getString(R.string.btn_disconnect));
                           connectBtn.setBackgroundResource(R.drawable.circle_button_disconnect);
+                          connectBtn.setTextColor(Color.WHITE);
                           connectBtn.setEnabled(true);
                           break;
                       case CONNECTING:
                           statusTv.setText(getString(R.string.status_connecting));
-                          serverTv.setText("");
                           connectBtn.setText(getString(R.string.btn_cancel));
+                          connectBtn.setBackgroundResource(R.drawable.circle_button_connecting);
+                          connectBtn.setTextColor(Color.WHITE);
                           connectBtn.setEnabled(true);
                           break;
                       case DISCONNECTING:
                           statusTv.setText(getString(R.string.status_disconnecting));
                           serverTv.setText("");
                           connectBtn.setText(getString(R.string.btn_wait));
+                          connectBtn.setBackgroundResource(R.drawable.circle_button_connecting);
+                          connectBtn.setTextColor(Color.WHITE);
                           connectBtn.setEnabled(false);
                           break;
                       default:
@@ -1243,8 +1320,9 @@ jobs:
                           serverTv.setText(getString(R.string.ready_label));
                           connectBtn.setText(getString(R.string.btn_connect));
                           connectBtn.setBackgroundResource(R.drawable.circle_button_connect);
+                          connectBtn.setTextColor(Color.WHITE);
                           connectBtn.setEnabled(true);
-                          connectedServerName = null;
+                          if (!autoConnectInProgress) connectedServerName = null;
                           break;
                   }
               }
@@ -1255,6 +1333,8 @@ jobs:
                   if (profile.isExpired()) { showExpired(); return; }
                   State st = svc != null ? svc.getState() : State.DISABLED;
                   if (st == State.CONNECTED || st == State.CONNECTING) {
+                      autoConnectInProgress = false;
+                      waitingForAuthResult = false;
                       if (svc != null) svc.disconnect();
                       connectedServerName = null;
                       return;
@@ -1264,41 +1344,89 @@ jobs:
                   savedSpinnerPos = sel;
                   statusTv.setText(getString(R.string.status_connecting));
                   connectBtn.setEnabled(false);
+                  connectBtn.setBackgroundResource(R.drawable.circle_button_connecting);
 
                   if (sel <= 0) {
+                      /* Auto mode with fallback chain */
                       serverTv.setText(getString(R.string.selecting_server));
+                      autoConnectInProgress = true;
+                      currentServerIndex = 0;
+
                       new Thread(() -> {
-                          ProfileCrypto.ServerInfo best = FastServerSelector.findFastest(profile.servers);
-                          if (best == null) {
+                          rankedServers = FastServerSelector.rankServers(profile.servers);
+                          if (rankedServers.isEmpty()) {
                               runOnUiThread(() -> {
+                                  autoConnectInProgress = false;
                                   refreshUI();
                                   Toast.makeText(this, getString(R.string.no_servers), Toast.LENGTH_SHORT).show();
                               });
                               return;
                           }
-                          runOnUiThread(() -> {
-                              int autoIdx = findServerIndex(best);
-                              if (autoIdx >= 0) {
-                                  savedSpinnerPos = autoIdx + 1;
-                                  serverSpinner.setSelection(savedSpinnerPos);
-                              }
-                              String name = best.name != null ? best.name : best.address;
-                              Toast.makeText(this,
-                                  String.format(getString(R.string.auto_selected), name),
-                                  Toast.LENGTH_SHORT).show();
-                              startVpn(best);
-                          });
+                          runOnUiThread(() -> tryServerAtIndex(0));
                       }).start();
                   } else {
+                      /* Manual selection — single attempt */
+                      autoConnectInProgress = false;
                       startVpn(profile.servers[sel - 1]);
                   }
               }
 
+              private void tryServerAtIndex(int index) {
+                  if (rankedServers == null || index >= rankedServers.size()) {
+                      autoConnectInProgress = false;
+                      refreshUI();
+                      Toast.makeText(this, getString(R.string.all_servers_failed), Toast.LENGTH_LONG).show();
+                      return;
+                  }
+
+                  currentServerIndex = index;
+                  FastServerSelector.RankedServer rs = rankedServers.get(index);
+                  String name = rs.server.name != null ? rs.server.name : rs.server.address;
+
+                  Log.i(TAG, "Trying server " + (index + 1) + "/" + rankedServers.size()
+                      + ": " + name + " (" + rs.latencyMs + "ms)");
+
+                  statusTv.setText(getString(R.string.status_connecting));
+                  serverTv.setText(String.format(getString(R.string.trying_server),
+                      name, index + 1, rankedServers.size()));
+                  connectBtn.setText(getString(R.string.btn_cancel));
+                  connectBtn.setEnabled(true);
+                  connectBtn.setBackgroundResource(R.drawable.circle_button_connecting);
+
+                  /* Update spinner to show which server */
+                  int spinIdx = findServerIndex(rs.server);
+                  if (spinIdx >= 0) {
+                      savedSpinnerPos = spinIdx + 1;
+                      serverSpinner.setSelection(savedSpinnerPos);
+                  }
+
+                  waitingForAuthResult = true;
+                  startVpn(rs.server);
+              }
+
+              private void tryNextServer() {
+                  if (!autoConnectInProgress) return;
+                  int next = currentServerIndex + 1;
+                  if (rankedServers == null || next >= rankedServers.size()) {
+                      autoConnectInProgress = false;
+                      refreshUI();
+                      Toast.makeText(this, getString(R.string.all_servers_failed), Toast.LENGTH_LONG).show();
+                      return;
+                  }
+                  String failedName = rankedServers.get(currentServerIndex).server.name;
+                  Toast.makeText(this,
+                      String.format(getString(R.string.server_auth_failed),
+                          failedName != null ? failedName : "server"),
+                      Toast.LENGTH_SHORT).show();
+
+                  /* Small delay before trying next */
+                  mainHandler.postDelayed(() -> tryServerAtIndex(next), 1500);
+              }
+
               private int findServerIndex(ProfileCrypto.ServerInfo server) {
                   if (profile == null || profile.servers == null) return -1;
-                  for (int i = 0; i < profile.servers.length; i++) {
+                  for (int i = 0; i < profile.servers.length; i++)
                       if (profile.servers[i].address.equals(server.address)) return i;
-                  }
                   return -1;
               }
 
@@ -1310,8 +1438,8 @@ jobs:
                           Log.i(TAG, "Cert import: alias=" + certAlias);
                           if (certAlias == null) {
                               Toast.makeText(this, getString(R.string.cert_failed), Toast.LENGTH_LONG).show();
-                              refreshUI();
-                              return;
+                              if (autoConnectInProgress) { tryNextServer(); return; }
+                              refreshUI(); return;
                           }
                       }
 
@@ -1319,11 +1447,9 @@ jobs:
                       ds.open();
                       try {
                           List<VpnProfile> all = ds.getAllVpnProfiles();
-                          for (VpnProfile p : all) {
-                              if (p.getName() != null && p.getName().startsWith("AsadVPN")) {
+                          for (VpnProfile p : all)
+                              if (p.getName() != null && p.getName().startsWith("AsadVPN"))
                                   ds.deleteVpnProfile(p);
-                              }
-                          }
                       } catch (Exception e) { Log.w(TAG, "Clean: " + e.getMessage()); }
 
                       VpnProfile vp = new VpnProfile();
@@ -1332,32 +1458,25 @@ jobs:
                       vp.setUsername(server.username);
                       vp.setPassword(server.password);
                       vp.setVpnType(VpnType.IKEV2_EAP);
-                      if (certAlias != null) {
-                          vp.setCertificateAlias(certAlias);
-                      }
-                      if (server.remoteId != null && !server.remoteId.isEmpty()) {
+                      if (certAlias != null) vp.setCertificateAlias(certAlias);
+                      if (server.remoteId != null && !server.remoteId.isEmpty())
                           vp.setRemoteId(server.remoteId);
-                      }
-                      if (profile.ikeProposal != null && !profile.ikeProposal.isEmpty()) {
+                      if (profile.ikeProposal != null && !profile.ikeProposal.isEmpty())
                           vp.setIkeProposal(profile.ikeProposal);
-                      }
-                      if (profile.espProposal != null && !profile.espProposal.isEmpty()) {
+                      if (profile.espProposal != null && !profile.espProposal.isEmpty())
                           vp.setEspProposal(profile.espProposal);
-                      }
-                      if (profile.mtu != null && profile.mtu > 0) {
+                      if (profile.mtu != null && profile.mtu > 0)
                           vp.setMTU(profile.mtu);
-                      }
-                      if (profile.splitTunneling != null) {
+                      if (profile.splitTunneling != null)
                           vp.setSplitTunneling(profile.splitTunneling);
-                      }
 
                       VpnProfile saved = ds.insertProfile(vp);
                       ds.close();
 
                       if (saved == null) {
                           Toast.makeText(this, getString(R.string.save_failed), Toast.LENGTH_LONG).show();
-                          refreshUI();
-                          return;
+                          if (autoConnectInProgress) { tryNextServer(); return; }
+                          refreshUI(); return;
                       }
 
                       Log.i(TAG, "Profile saved: uuid=" + saved.getUUID()
@@ -1370,22 +1489,22 @@ jobs:
                       connectedServerName = server.name != null ? server.name : server.address;
 
                       Intent intent = VpnService.prepare(this);
-                      if (intent != null) {
-                          startActivityForResult(intent, VPN_REQ);
-                      } else {
-                          launchVpn();
-                      }
+                      if (intent != null) startActivityForResult(intent, VPN_REQ);
+                      else launchVpn();
                   } catch (Exception e) {
                       Log.e(TAG, "VPN start error", e);
-                      Toast.makeText(this,
-                          String.format(getString(R.string.vpn_failed), e.getMessage()),
+                      Toast.makeText(this, String.format(getString(R.string.vpn_failed), e.getMessage()),
                           Toast.LENGTH_LONG).show();
+                      if (autoConnectInProgress) { tryNextServer(); return; }
                       refreshUI();
                   }
               }
 
               private void launchVpn() {
-                  if (pendingUuid == null || svc == null) { refreshUI(); return; }
+                  if (pendingUuid == null || svc == null) {
+                      if (autoConnectInProgress) { tryNextServer(); return; }
+                      refreshUI(); return;
+                  }
                   Bundle b = new Bundle();
                   b.putString(VpnProfileDataSource.KEY_UUID, pendingUuid);
                   b.putString(VpnProfileDataSource.KEY_PASSWORD, pendingServer.password);
@@ -1396,7 +1515,7 @@ jobs:
                   super.onActivityResult(req, res, data);
                   if (req == VPN_REQ) {
                       if (res == RESULT_OK) launchVpn();
-                      else refreshUI();
+                      else { autoConnectInProgress = false; refreshUI(); }
                   } else if (req == QR_REQ && res == RESULT_OK && data != null) {
                       String s = data.getStringExtra("SCAN_RESULT");
                       if (s != null && !s.isEmpty()) doImport(s);
@@ -1405,29 +1524,16 @@ jobs:
 
               /* ── Update ── */
               private void forceUpdate() {
-                  if (profile == null) {
-                      Toast.makeText(this, getString(R.string.import_first), Toast.LENGTH_SHORT).show();
-                      return;
-                  }
-                  if (profile.updateUrl == null || profile.updateUrl.isEmpty()) {
-                      Toast.makeText(this, getString(R.string.no_update_url), Toast.LENGTH_SHORT).show();
-                      return;
-                  }
+                  if (profile == null) { Toast.makeText(this, getString(R.string.import_first), Toast.LENGTH_SHORT).show(); return; }
+                  if (profile.updateUrl == null || profile.updateUrl.isEmpty()) { Toast.makeText(this, getString(R.string.no_update_url), Toast.LENGTH_SHORT).show(); return; }
                   Toast.makeText(this, getString(R.string.updating), Toast.LENGTH_SHORT).show();
                   pm.forceUpdate(new ProfileManager.UpdateCallback() {
                       public void onUpdated(ProfileCrypto.ProfileData d) {
-                          runOnUiThread(() -> {
-                              profile = d;
-                              refreshUI();
-                              Toast.makeText(AsadMainActivity.this,
-                                  getString(R.string.servers_updated), Toast.LENGTH_SHORT).show();
-                          });
-                      }
+                          runOnUiThread(() -> { profile = d; refreshUI();
+                              Toast.makeText(AsadMainActivity.this, getString(R.string.servers_updated), Toast.LENGTH_SHORT).show(); }); }
                       public void onError(Exception e) {
                           runOnUiThread(() -> Toast.makeText(AsadMainActivity.this,
-                              String.format(getString(R.string.update_failed), e.getMessage()),
-                              Toast.LENGTH_LONG).show());
-                      }
+                              String.format(getString(R.string.update_failed), e.getMessage()), Toast.LENGTH_LONG).show()); }
                   });
               }
 
@@ -1435,13 +1541,12 @@ jobs:
               private void showImport() {
                   View v = getLayoutInflater().inflate(R.layout.dialog_import_profile, null);
                   EditText input = v.findViewById(R.id.profile_input);
-                  new AlertDialog.Builder(this)
+                  new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                       .setTitle(getString(R.string.import_title))
                       .setView(v)
                       .setPositiveButton(getString(R.string.import_btn_ok), (d, w) -> {
                           String t = input.getText().toString().trim();
-                          if (!t.isEmpty()) doImport(t);
-                      })
+                          if (!t.isEmpty()) doImport(t); })
                       .setNegativeButton(getString(R.string.import_btn_cancel), null)
                       .show();
               }
@@ -1454,29 +1559,23 @@ jobs:
                           String.format(getString(R.string.imported_days), profile.remainingDays()),
                           Toast.LENGTH_LONG).show();
                       refreshUI();
-                      if (!profile.isExpired() && profile.remainingDays() <= 3) {
-                          showRenewalWarning(profile.remainingDays());
-                      }
+                      if (profile.remainingDays() <= 3) showRenewalWarning(profile.remainingDays());
                   } catch (Exception e) {
                       Log.e(TAG, "Import fail", e);
-                      Toast.makeText(this,
-                          String.format(getString(R.string.invalid_profile), e.getMessage()),
+                      Toast.makeText(this, String.format(getString(R.string.invalid_profile), e.getMessage()),
                           Toast.LENGTH_LONG).show();
                   }
               }
 
               /* ── QR ── */
               private void launchQr() {
-                  try {
-                      startActivityForResult(new Intent(this, QrScannerActivity.class), QR_REQ);
-                  } catch (Exception e) {
-                      Toast.makeText(this, getString(R.string.qr_unavailable), Toast.LENGTH_LONG).show();
-                  }
+                  try { startActivityForResult(new Intent(this, QrScannerActivity.class), QR_REQ); }
+                  catch (Exception e) { Toast.makeText(this, getString(R.string.qr_unavailable), Toast.LENGTH_LONG).show(); }
               }
 
               /* ── Expired dialog ── */
               private void showExpired() {
-                  new AlertDialog.Builder(this)
+                  new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                       .setTitle(getString(R.string.expired_title))
                       .setMessage(getString(R.string.expired_msg))
                       .setPositiveButton(getString(R.string.expired_support), (d, w) ->
@@ -1488,9 +1587,7 @@ jobs:
 
               /* ── Renewal warning (3 days or less) ── */
               private void showRenewalWarning(int days) {
-                  if (renewalWarningShown) return;
-                  renewalWarningShown = true;
-                  new AlertDialog.Builder(this)
+                  new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                       .setTitle(getString(R.string.renew_title))
                       .setMessage(String.format(getString(R.string.renew_msg), days))
                       .setPositiveButton(getString(R.string.renew_btn), (d, w) ->
@@ -1553,23 +1650,20 @@ jobs:
       - name: Pre-build validation
         run: |
           cd ss-full/src/frontends/android
-          echo "=== Checking applicationId ==="
+          echo "=== applicationId ==="
           grep "applicationId" app/build.gradle
-          echo "=== Checking LAUNCHER count ==="
+          echo "=== LAUNCHER ==="
           grep -c "android.intent.category.LAUNCHER" app/src/main/AndroidManifest.xml
-          echo "=== Checking play-services ==="
+          echo "=== play-services ==="
           grep "play-services-vision" app/build.gradle
-          echo "=== Verify VpnProfileSqlDataSource no-arg constructor ==="
+          echo "=== VpnProfileSqlDataSource no-arg ==="
           grep -n "new VpnProfileSqlDataSource" app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
-          echo "=== Verify VpnStateService.connect(Bundle,boolean) usage ==="
+          echo "=== connect(Bundle,boolean) ==="
           grep -n "svc.connect" app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
-          echo "=== Verify LocalCertificateStore API ==="
-          grep -n "addCertificate\|getCertificateAlias" app/src/main/java/org/strongswan/android/logic/CertificateImporter.java
-          echo "=== Verify KEY_UUID and KEY_PASSWORD ==="
-          grep -n "KEY_UUID\|KEY_PASSWORD" app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
-          echo "=== Check string resources ==="
-          grep -c "name=\"renew_" app/src/main/res/values/asad_strings.xml
-          grep -c "name=\"renew_" app/src/main/res/values-fa/strings.xml
+          echo "=== Dialog theme ==="
+          grep -n "Theme_DeviceDefault_Dialog" app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java
+          echo "=== Button drawables ==="
+          ls -la app/src/main/res/drawable/circle_button_*.xml
           echo "=== All custom files ==="
           for f in \
             app/src/main/java/org/strongswan/android/logic/ProfileCrypto.java \
@@ -1579,7 +1673,9 @@ jobs:
             app/src/main/java/org/strongswan/android/ui/AsadMainActivity.java \
             app/src/main/java/org/strongswan/android/ui/QrScannerActivity.java \
             app/src/main/res/values/asad_strings.xml \
-            app/src/main/res/values-fa/strings.xml; do
+            app/src/main/res/values-fa/strings.xml \
+            app/src/main/res/drawable/circle_button_expired.xml \
+            app/src/main/res/drawable/circle_button_connecting.xml; do
             if [ -f "$f" ]; then echo "OK: $f"; else echo "MISSING: $f"; exit 1; fi
           done
 
